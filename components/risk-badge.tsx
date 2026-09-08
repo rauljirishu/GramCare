@@ -1,0 +1,2 @@
+import type { RiskLevel } from '@/lib/types';
+export function RiskBadge({level}:{level:RiskLevel | null}) { if (!level) return <span className="text-slate-400">Not assessed</span>; const c = {high:'bg-rose-100 text-rose-700',medium:'bg-amber-100 text-amber-700',low:'bg-emerald-100 text-emerald-700'}[level]; return <span className={`rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${c}`}>{level}</span>; }

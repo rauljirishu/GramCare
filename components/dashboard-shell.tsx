@@ -1,0 +1,5 @@
+'use client';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+const nav = [['/dashboard','Overview'],['/patients','Patients'],['/high-risk','High risk'],['/follow-ups','Follow-ups']];
+export function DashboardShell({children}:{children:React.ReactNode}) { const path = usePathname(); return <div className="min-h-screen md:flex"><aside className="border-b border-brand-900 bg-brand-900 px-5 py-5 text-white md:min-h-screen md:w-64 md:border-b-0"><Link href="/dashboard" className="text-xl font-bold">Gram<span className="text-emerald-300">Swasthya</span></Link><p className="mt-1 text-xs text-emerald-100">Doctor Portal</p><nav className="mt-6 flex gap-2 overflow-x-auto md:block md:space-y-1">{nav.map(([href,label]) => <Link key={href} href={href} className={`block whitespace-nowrap rounded-lg px-3 py-2 text-sm ${path === href ? 'bg-white/15 font-semibold' : 'text-emerald-100 hover:bg-white/10'}`}>{label}</Link>)}</nav></aside><main className="min-w-0 flex-1 p-4 sm:p-7">{children}</main></div>; }

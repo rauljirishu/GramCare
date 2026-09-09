@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
+import { createPatientDirectly } from '@/lib/api/doctor';
 import { syncEngine } from '@/lib/offline/sync-engine';
-import { UserPlus, X } from 'lucide-react';
+import { UserPlus, X, AlertCircle } from 'lucide-react';
 import type { Patient } from '@/lib/types';
 
 interface ModalProps {
@@ -19,25 +20,43 @@ export function PatientRegistrationModal({ onClose, onSuccess }: ModalProps) {
   const [phone, setPhone] = useState('');
   const [guardianName, setGuardianName] = useState('');
   const [busy, setBusy] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || age === '') return;
 
     setBusy(true);
+    setErrorMsg('');
     try {
-      const patient = await syncEngine.createPatientOffline({
-        name,
-        age: Number(age),
-        gender,
-        village,
-        address,
-        phone,
-        guardianName
-      });
+      let patient: Patient;
+      if (syncEngine.isOnline()) {
+        patient = await createPatientDirectly({
+          name,
+          age: Number(age),
+          gender,
+          village,
+          address,
+          phone,
+          guardianName
+        });
+      } else {
+        patient = await syncEngine.createPatientOffline({
+          name,
+          age: Number(age),
+          gender,
+          village,
+          address,
+          phone,
+          guardianName
+        });
+      }
 
       onSuccess(patient);
       onClose();
+    } catch (err: any) {
+      console.error('Patient registration failed:', err);
+      setErrorMsg(err?.message || 'Unable to save patient to database. Please check your network and permissions.');
     } finally {
       setBusy(false);
     }
@@ -53,7 +72,7 @@ export function PatientRegistrationModal({ onClose, onSuccess }: ModalProps) {
             </span>
             <div>
               <h2 className="text-xl font-black text-slate-900">Register New Patient</h2>
-              <p className="text-xs text-slate-500">Offline & Online Patient Intake Form</p>
+              <p className="text-xs text-slate-500">Real Supabase Database Patient Intake Form</p>
             </div>
           </div>
           <button onClick={onClose} className="h-8 w-8 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 grid place-items-center">
@@ -61,7 +80,14 @@ export function PatientRegistrationModal({ onClose, onSuccess }: ModalProps) {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+        {errorMsg && (
+          <div className="mt-4 flex items-center gap-2 rounded-xl bg-rose-50 border border-rose-200 p-3 text-xs font-bold text-rose-800">
+            <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
+            <span>{errorMsg}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="mt-4 space-y-4">
           <div>
             <label className="block text-xs font-bold text-slate-700">Patient Full Name *</label>
             <input
@@ -154,7 +180,7 @@ export function PatientRegistrationModal({ onClose, onSuccess }: ModalProps) {
               Cancel
             </button>
             <button disabled={busy} type="submit" className="primary-btn text-xs py-2.5">
-              {busy ? 'Saving patient…' : 'Save Patient (Offline Ready)'}
+              {busy ? 'Saving patient…' : 'Save Patient to Database'}
             </button>
           </div>
         </form>

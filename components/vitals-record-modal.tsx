@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { createHealthRecordAndRisk } from '@/lib/api/doctor';
 import { syncEngine } from '@/lib/offline/sync-engine';
 import { predictOfflineRisk, type PredictionResult } from '@/lib/ai/risk-predictor';
-import { Activity, X, Sparkles } from 'lucide-react';
+import { Activity, X, Sparkles, AlertCircle } from 'lucide-react';
 import type { Patient } from '@/lib/types';
 
 interface ModalProps {
@@ -26,6 +27,7 @@ export function VitalsRecordModal({ patients = [], patientId: propsPatientId, se
   const [notes, setNotes] = useState('');
   const [prediction, setPrediction] = useState<PredictionResult | null>(null);
   const [busy, setBusy] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
     const res = predictOfflineRisk({
@@ -45,28 +47,46 @@ export function VitalsRecordModal({ patients = [], patientId: propsPatientId, se
     if (!patientId) return;
 
     setBusy(true);
+    setErrorMsg('');
     try {
-      await syncEngine.createVitalsAndRiskOffline({
-        patientId,
-        systolicBp: systolicBp !== '' ? Number(systolicBp) : null,
-        diastolicBp: diastolicBp !== '' ? Number(diastolicBp) : null,
-        bloodSugar: bloodSugar !== '' ? Number(bloodSugar) : null,
-        temperatureC: temperatureC !== '' ? Number(temperatureC) : null,
-        pulseBpm: pulseBpm !== '' ? Number(pulseBpm) : null,
-        spo2: spo2 !== '' ? Number(spo2) : null,
-        symptoms,
-        notes
-      });
+      if (syncEngine.isOnline() && !patientId.startsWith('loc_')) {
+        await createHealthRecordAndRisk({
+          patientId,
+          systolicBp: systolicBp !== '' ? Number(systolicBp) : null,
+          diastolicBp: diastolicBp !== '' ? Number(diastolicBp) : null,
+          bloodSugar: bloodSugar !== '' ? Number(bloodSugar) : null,
+          temperatureC: temperatureC !== '' ? Number(temperatureC) : null,
+          pulseBpm: pulseBpm !== '' ? Number(pulseBpm) : null,
+          spo2: spo2 !== '' ? Number(spo2) : null,
+          symptoms,
+          notes
+        });
+      } else {
+        await syncEngine.createVitalsAndRiskOffline({
+          patientId,
+          systolicBp: systolicBp !== '' ? Number(systolicBp) : null,
+          diastolicBp: diastolicBp !== '' ? Number(diastolicBp) : null,
+          bloodSugar: bloodSugar !== '' ? Number(bloodSugar) : null,
+          temperatureC: temperatureC !== '' ? Number(temperatureC) : null,
+          pulseBpm: pulseBpm !== '' ? Number(pulseBpm) : null,
+          spo2: spo2 !== '' ? Number(spo2) : null,
+          symptoms,
+          notes
+        });
+      }
 
       onSuccess();
       onClose();
+    } catch (err: any) {
+      console.error('Vitals recording error:', err);
+      setErrorMsg(err?.message || 'Unable to save vitals record. Please check database permissions.');
     } finally {
       setBusy(false);
     }
   };
 
   const getBadgeStyle = (level?: string) => {
-    if (level === 'high') return 'bg-rose-600 text-white border-rose-700 shadow-md';
+    if (level === 'high' || level === 'critical') return 'bg-rose-600 text-white border-rose-700 shadow-md';
     if (level === 'medium') return 'bg-amber-500 text-white border-amber-600 shadow-md';
     return 'bg-emerald-600 text-white border-emerald-700 shadow-md';
   };
@@ -80,8 +100,8 @@ export function VitalsRecordModal({ patients = [], patientId: propsPatientId, se
               <Activity className="h-5 w-5" />
             </span>
             <div>
-              <h2 className="text-xl font-black text-slate-900">Record Vitals & Symptoms</h2>
-              <p className="text-xs text-slate-500">Offline AI Risk Classification & Triage</p>
+              <h2 className="text-xl font-black text-slate-900">Record Vitals & Risk Triage</h2>
+              <p className="text-xs text-slate-500">Real Supabase Health Record & CDSS Risk Assessment</p>
             </div>
           </div>
           <button onClick={onClose} className="h-8 w-8 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 grid place-items-center">
@@ -89,7 +109,14 @@ export function VitalsRecordModal({ patients = [], patientId: propsPatientId, se
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+        {errorMsg && (
+          <div className="mt-4 flex items-center gap-2 rounded-xl bg-rose-50 border border-rose-200 p-3 text-xs font-bold text-rose-800">
+            <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
+            <span>{errorMsg}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="mt-4 space-y-4">
           <div>
             <label className="block text-xs font-bold text-slate-700">Select Patient *</label>
             <select
@@ -199,7 +226,7 @@ export function VitalsRecordModal({ patients = [], patientId: propsPatientId, se
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5 text-xs font-black uppercase text-slate-700">
                   <Sparkles className="h-4 w-4 text-blue-600" />
-                  <span>Offline AI Risk Prediction</span>
+                  <span>Clinical Decision Support System (CDSS) Triage</span>
                 </div>
                 
                 <span className={`rounded-full px-3 py-1 text-xs font-black uppercase tracking-wider ${getBadgeStyle(prediction.riskLevel)}`}>
@@ -230,7 +257,7 @@ export function VitalsRecordModal({ patients = [], patientId: propsPatientId, se
               Cancel
             </button>
             <button disabled={busy} type="submit" className="primary-btn text-xs py-2.5">
-              {busy ? 'Evaluating & Saving…' : 'Save Record (Offline AI Score Calculated)'}
+              {busy ? 'Evaluating & Saving…' : 'Save Vitals & Risk Record'}
             </button>
           </div>
         </form>

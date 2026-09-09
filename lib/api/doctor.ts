@@ -11,15 +11,11 @@ import type {
   RiskAssessment, 
   Notification, 
   AuditLog, 
-  FollowUp 
+  FollowUp,
+  Visit,
+  RiskLevel
 } from '@/lib/types';
-import { 
-  DEMO_PATIENTS, 
-  DEMO_REFERRALS, 
-  DEMO_FOLLOWUPS, 
-  DEMO_NOTIFICATIONS, 
-  DEMO_AUDIT_LOGS 
-} from '@/lib/demo-data';
+import { predictOfflineRisk } from '@/lib/ai/risk-predictor';
 
 export interface PatientFilterOptions {
   query?: string;
@@ -34,13 +30,16 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   const today = new Date().toISOString().slice(0, 10);
   try {
     const [patients, risks, referrals, followUps] = await Promise.all([
-      supabase.from('patients').select('*', { count: 'exact', head: true }),
+      supabase.from('patients').select('id', { count: 'exact', head: true }),
       supabase.from('risk_assessments').select('patient_id, risk_level'),
-      supabase.from('referrals').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+      supabase.from('referrals').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
       supabase.from('follow_ups').select('status, scheduled_date'),
     ]);
 
-    if (patients.error || !patients.count) throw new Error('Fallback to demo data');
+    if (patients.error) console.error('Supabase patients count error:', patients.error);
+    if (risks.error) console.error('Supabase risks error:', risks.error);
+    if (referrals.error) console.error('Supabase referrals error:', referrals.error);
+    if (followUps.error) console.error('Supabase followUps error:', followUps.error);
 
     const highRiskSet = new Set<string>();
     const criticalSet = new Set<string>();
@@ -58,23 +57,24 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     const missedFollowUpsCount = (followUps.data ?? []).filter(f => f.status === 'missed' || (f.status === 'scheduled' && f.scheduled_date < today)).length;
 
     return {
-      totalPatients: patients.count ?? DEMO_PATIENTS.length,
-      newPatientsThisWeek: 3,
-      highRiskPatients: highRiskSet.size || DEMO_PATIENTS.filter(p => p.latestRisk?.risk_level === 'high' || p.latestRisk?.risk_level === 'critical').length,
-      criticalPatients: criticalSet.size || DEMO_PATIENTS.filter(p => p.latestRisk?.risk_level === 'critical').length,
-      pendingReferrals: referrals.count ?? DEMO_REFERRALS.filter(r => r.status === 'pending').length,
-      activeFollowUps: activeFollowUpsCount || DEMO_FOLLOWUPS.filter(f => f.status === 'scheduled' || f.status === 'upcoming').length,
-      missedFollowUps: missedFollowUpsCount || DEMO_FOLLOWUPS.filter(f => f.status === 'missed').length,
+      totalPatients: patients.count ?? 0,
+      newPatientsThisWeek: patients.count ?? 0,
+      highRiskPatients: highRiskSet.size,
+      criticalPatients: criticalSet.size,
+      pendingReferrals: referrals.count ?? 0,
+      activeFollowUps: activeFollowUpsCount,
+      missedFollowUps: missedFollowUpsCount,
     };
-  } catch {
+  } catch (err) {
+    console.error('getDashboardStats failed:', err);
     return {
-      totalPatients: DEMO_PATIENTS.length,
-      newPatientsThisWeek: 3,
-      highRiskPatients: DEMO_PATIENTS.filter(p => p.latestRisk?.risk_level === 'high' || p.latestRisk?.risk_level === 'critical').length,
-      criticalPatients: DEMO_PATIENTS.filter(p => p.latestRisk?.risk_level === 'critical').length,
-      pendingReferrals: DEMO_REFERRALS.filter(r => r.status === 'pending').length,
-      activeFollowUps: DEMO_FOLLOWUPS.filter(f => f.status === 'scheduled' || f.status === 'upcoming').length,
-      missedFollowUps: DEMO_FOLLOWUPS.filter(f => f.status === 'missed').length,
+      totalPatients: 0,
+      newPatientsThisWeek: 0,
+      highRiskPatients: 0,
+      criticalPatients: 0,
+      pendingReferrals: 0,
+      activeFollowUps: 0,
+      missedFollowUps: 0,
     };
   }
 }
@@ -87,18 +87,28 @@ export async function getPatients(options: PatientFilterOptions = {}): Promise<P
       .order('created_at', { ascending: false });
 
     if (options.query) {
-      request = request.or(`name.ilike.%${options.query}%,village.ilike.%${options.query}%`);
+      const q = options.query.trim();
+      request = request.or(`name.ilike.%${q}%,village.ilike.%${q}%,phone.ilike.%${q}%`);
     }
 
     const { data: patients, error } = await request;
-    if (error || !patients || !patients.length) throw new Error('Fallback to demo');
+    if (error) {
+      console.error('Supabase getPatients error:', error);
+      throw error;
+    }
+
+    if (!patients || patients.length === 0) {
+      return [];
+    }
 
     const ids = patients.map(p => p.id);
-    const { data: risks } = await supabase
+    const { data: risks, error: riskError } = await supabase
       .from('risk_assessments')
       .select('*')
       .in('patient_id', ids)
       .order('assessed_at', { ascending: false });
+
+    if (riskError) console.error('Supabase risk query error:', riskError);
 
     const latest = new Map<string, RiskAssessment>();
     (risks ?? []).forEach(r => {
@@ -121,76 +131,230 @@ export async function getPatients(options: PatientFilterOptions = {}): Promise<P
     }
 
     return result;
-  } catch {
-    let result = [...DEMO_PATIENTS];
-    if (options.query) {
-      const q = options.query.toLowerCase();
-      result = result.filter(p => p.name.toLowerCase().includes(q) || (p.village && p.village.toLowerCase().includes(q)));
-    }
-    if (options.riskLevel && options.riskLevel !== 'all') {
-      result = result.filter(p => p.latestRisk?.risk_level === options.riskLevel);
-    }
-    if (options.village && options.village !== 'all') {
-      result = result.filter(p => p.village?.toLowerCase() === options.village?.toLowerCase());
-    }
-    if (options.gender && options.gender !== 'all') {
-      result = result.filter(p => p.gender?.toLowerCase() === options.gender?.toLowerCase());
-    }
-    return result;
+  } catch (err) {
+    console.error('getPatients failed:', err);
+    return [];
   }
 }
 
-export async function getPatientDetail(patientId: string) {
-  try {
-    const [patient, records, risks, referrals, followUps] = await Promise.all([
-      supabase.from('patients').select('*').eq('id', patientId).single(),
-      supabase.from('health_records').select('*').eq('patient_id', patientId).order('recorded_at', { ascending: false }),
-      supabase.from('risk_assessments').select('*').eq('patient_id', patientId).order('assessed_at', { ascending: false }),
-      supabase.from('referrals').select('*').eq('patient_id', patientId).order('created_at', { ascending: false }),
-      supabase.from('follow_ups').select('*').eq('patient_id', patientId).order('scheduled_date'),
-    ]);
-
-    if (patient.error || !patient.data) throw new Error('Fallback to demo');
-
-    return {
-      patient: patient.data as Patient,
-      records: (records.data ?? []) as HealthRecord[],
-      risks: (risks.data ?? []) as RiskAssessment[],
-      referrals: (referrals.data ?? []) as Referral[],
-      followUps: (followUps.data ?? []) as FollowUp[]
-    };
-  } catch {
-    const found = DEMO_PATIENTS.find(p => p.id === patientId) ?? DEMO_PATIENTS[0];
-    const referrals = DEMO_REFERRALS.filter(r => r.patient_id === found.id);
-    const followUps = DEMO_FOLLOWUPS.filter(f => f.patient_id === found.id);
-    
-    const records: HealthRecord[] = [
-      {
-        id: `rec-${found.id}`,
-        patient_id: found.id,
-        systolic_bp: 172,
-        diastolic_bp: 105,
-        blood_sugar: 185,
-        weight_kg: 68,
-        temperature_c: 38.2,
-        pulse_bpm: 94,
-        spo2: 93,
-        symptoms: 'Headache, persistent fatigue, mild dizziness',
-        notes: 'Vitals recorded during village mobile intake.',
-        recorded_at: found.created_at
-      }
-    ];
-
-    const risks: RiskAssessment[] = found.latestRisk ? [found.latestRisk] : [];
-
-    return {
-      patient: found,
-      records,
-      risks,
-      referrals,
-      followUps
-    };
+export async function createPatientDirectly(input: {
+  name: string;
+  age: number;
+  gender: string;
+  village?: string;
+  address?: string;
+  phone?: string;
+  guardianName?: string;
+}): Promise<Patient> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    throw new Error('Authentication required to register a patient');
   }
+
+  // Verify/create profile in public.users to avoid foreign key violations
+  const { data: userProfile } = await supabase.from('users').select('id').eq('id', user.id).single();
+  if (!userProfile) {
+    await supabase.from('users').upsert({
+      id: user.id,
+      name: user.user_metadata?.name || 'Healthcare Staff',
+      role: (user.user_metadata?.requested_role || 'asha') as any,
+      email: user.email
+    });
+  }
+
+  const { data, error } = await supabase
+    .from('patients')
+    .insert({
+      name: input.name.trim(),
+      age: Number(input.age),
+      gender: input.gender as any,
+      village: input.village?.trim() || null,
+      address: input.address?.trim() || null,
+      phone: input.phone?.trim() || null,
+      guardian_name: input.guardianName?.trim() || null,
+      registered_by: user.id
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Supabase createPatientDirectly error:', error);
+    throw new Error(`Failed to save patient: ${error.message}`);
+  }
+
+  await recordAuditLog({
+    action: 'CREATE_PATIENT',
+    entityType: 'patient',
+    entityId: data.id,
+    details: { name: data.name, village: data.village }
+  });
+
+  return data as Patient;
+}
+
+export async function updatePatient(patientId: string, updates: Partial<Patient>): Promise<Patient> {
+  const { data, error } = await supabase
+    .from('patients')
+    .update(updates)
+    .eq('id', patientId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Supabase updatePatient error:', error);
+    throw new Error(`Failed to update patient: ${error.message}`);
+  }
+
+  await recordAuditLog({
+    action: 'UPDATE_PATIENT',
+    entityType: 'patient',
+    entityId: patientId,
+    details: updates
+  });
+
+  return data as Patient;
+}
+
+export async function deletePatient(patientId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('patients')
+    .delete()
+    .eq('id', patientId);
+
+  if (error) {
+    console.error('Supabase deletePatient error:', error);
+    throw new Error(`Failed to delete patient: ${error.message}`);
+  }
+
+  await recordAuditLog({
+    action: 'DELETE_PATIENT',
+    entityType: 'patient',
+    entityId: patientId
+  });
+
+  return true;
+}
+
+export async function getPatientDetail(patientId: string) {
+  if (!patientId) {
+    throw new Error('Patient ID is required');
+  }
+
+  const [patient, records, risks, referrals, followUps] = await Promise.all([
+    supabase.from('patients').select('*').eq('id', patientId).single(),
+    supabase.from('health_records').select('*').eq('patient_id', patientId).order('recorded_at', { ascending: false }),
+    supabase.from('risk_assessments').select('*').eq('patient_id', patientId).order('assessed_at', { ascending: false }),
+    supabase.from('referrals').select('*').eq('patient_id', patientId).order('created_at', { ascending: false }),
+    supabase.from('follow_ups').select('*').eq('patient_id', patientId).order('scheduled_date'),
+  ]);
+
+  if (patient.error || !patient.data) {
+    console.error('Supabase getPatientDetail error:', patient.error);
+    throw new Error(`Patient record not found for ID: ${patientId}`);
+  }
+
+  return {
+    patient: patient.data as Patient,
+    records: (records.data ?? []) as HealthRecord[],
+    risks: (risks.data ?? []) as RiskAssessment[],
+    referrals: (referrals.data ?? []) as Referral[],
+    followUps: (followUps.data ?? []) as FollowUp[]
+  };
+}
+
+export async function createHealthRecordAndRisk(input: {
+  patientId: string;
+  systolicBp?: number | null;
+  diastolicBp?: number | null;
+  bloodSugar?: number | null;
+  weightKg?: number | null;
+  temperatureC?: number | null;
+  pulseBpm?: number | null;
+  spo2?: number | null;
+  symptoms?: string | null;
+  notes?: string | null;
+}): Promise<{ record: HealthRecord; risk: RiskAssessment }> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    throw new Error('Authentication required to record vitals');
+  }
+
+  // 1. Insert health record
+  const { data: record, error: recError } = await supabase
+    .from('health_records')
+    .insert({
+      patient_id: input.patientId,
+      recorded_by: user.id,
+      systolic_bp: input.systolicBp ?? null,
+      diastolic_bp: input.diastolicBp ?? null,
+      blood_sugar: input.bloodSugar ?? null,
+      weight_kg: input.weightKg ?? null,
+      temperature_c: input.temperatureC ?? null,
+      pulse_bpm: input.pulseBpm ?? null,
+      spo2: input.spo2 ?? null,
+      symptoms: input.symptoms?.trim() || null,
+      notes: input.notes?.trim() || null
+    })
+    .select()
+    .single();
+
+  if (recError) {
+    console.error('Supabase insert health_records error:', recError);
+    throw new Error(`Failed to save vitals: ${recError.message}`);
+  }
+
+  // 2. Predict & insert risk assessment
+  const prediction = predictOfflineRisk({
+    systolicBp: input.systolicBp,
+    diastolicBp: input.diastolicBp,
+    bloodSugar: input.bloodSugar,
+    temperatureC: input.temperatureC,
+    pulseBpm: input.pulseBpm,
+    spo2: input.spo2,
+    symptoms: input.symptoms
+  });
+
+  const { data: risk, error: riskError } = await supabase
+    .from('risk_assessments')
+    .insert({
+      patient_id: input.patientId,
+      health_record_id: record.id,
+      risk_score: prediction.riskScore,
+      risk_level: prediction.riskLevel as any,
+      model_version: prediction.modelVersion
+    })
+    .select()
+    .single();
+
+  if (riskError) {
+    console.error('Supabase insert risk_assessments error:', riskError);
+    throw new Error(`Failed to save risk assessment: ${riskError.message}`);
+  }
+
+  await recordAuditLog({
+    action: 'RECORD_VITALS_AND_RISK',
+    entityType: 'health_record',
+    entityId: record.id,
+    details: { patient_id: input.patientId, risk_level: prediction.riskLevel }
+  });
+
+  if (prediction.riskLevel === 'high' || prediction.riskLevel === 'critical') {
+    await createNotification({
+      patientId: input.patientId,
+      title: `${prediction.riskLevel.toUpperCase()} Clinical Triage Alert`,
+      message: `Patient flag: ${prediction.warningSignals?.join(', ') || 'High risk vitals detected'}`,
+      type: 'high_risk'
+    });
+  }
+
+  return {
+    record: record as HealthRecord,
+    risk: {
+      ...risk,
+      warning_signals: prediction.warningSignals,
+      recommended_action: prediction.recommendedAction
+    } as RiskAssessment
+  };
 }
 
 export async function createReferral(input: {
@@ -206,65 +370,48 @@ export async function createReferral(input: {
   expectedVisitDate?: string;
 }) {
   const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Authentication required to create referral');
 
-  try {
-    const { data, error } = await supabase
-      .from('referrals')
-      .insert({
-        patient_id: input.patientId,
-        risk_assessment_id: input.riskAssessmentId ?? null,
-        referred_by: user?.id ?? null,
-        referred_to_facility_id: input.facilityId ?? null,
-        referred_to_doctor_id: input.doctorId ?? null,
-        referred_to_text: input.destination ?? null,
-        reason: input.reason,
-        priority: input.priority ?? 'routine',
-        symptoms: input.symptoms ?? null,
-        clinical_notes: input.clinicalNotes ?? null,
-        expected_visit_date: input.expectedVisitDate ?? null,
-        status: 'pending'
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    await recordAuditLog({
-      action: 'CREATE_REFERRAL',
-      entityType: 'referral',
-      entityId: data.id,
-      details: { patient_id: input.patientId, reason: input.reason, priority: input.priority }
-    });
-
-    await createNotification({
-      patientId: input.patientId,
-      title: 'New Clinical Referral Generated',
-      message: `Priority ${input.priority ?? 'routine'} referral: ${input.reason}`,
-      type: 'referral'
-    });
-
-    return data as Referral;
-  } catch {
-    const newRef: Referral = {
-      id: `ref-local-${Date.now()}`,
+  const { data, error } = await supabase
+    .from('referrals')
+    .insert({
       patient_id: input.patientId,
-      status: 'pending',
-      priority: input.priority ?? 'routine',
+      risk_assessment_id: input.riskAssessmentId ?? null,
+      referred_by: user.id,
+      referred_to_facility_id: input.facilityId ?? null,
+      referred_to_doctor_id: input.doctorId ?? null,
+      referred_to_text: input.destination || 'District Referral Hospital',
       reason: input.reason,
+      priority: input.priority ?? 'routine',
       symptoms: input.symptoms ?? null,
       clinical_notes: input.clinicalNotes ?? null,
       expected_visit_date: input.expectedVisitDate ?? null,
-      referred_to_text: input.destination ?? 'District Hospital Triage',
-      referred_to_facility_id: null,
-      referred_to_doctor_id: null,
-      created_at: new Date().toISOString()
-    };
-    DEMO_REFERRALS.unshift(newRef);
-    return newRef;
+      status: 'pending'
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Supabase createReferral error:', error);
+    throw new Error(`Failed to generate referral: ${error.message}`);
   }
+
+  await recordAuditLog({
+    action: 'CREATE_REFERRAL',
+    entityType: 'referral',
+    entityId: data.id,
+    details: { patient_id: input.patientId, reason: input.reason, priority: input.priority }
+  });
+
+  await createNotification({
+    patientId: input.patientId,
+    title: 'New Inter-Facility Referral Created',
+    message: `Priority ${input.priority ?? 'routine'} referral to ${input.destination || 'District Hospital'}`,
+    type: 'referral'
+  });
+
+  return data as Referral;
 }
-
-
 
 export async function getReferrals(statusFilter = 'all'): Promise<Referral[]> {
   try {
@@ -273,11 +420,14 @@ export async function getReferrals(statusFilter = 'all'): Promise<Referral[]> {
       req = req.eq('status', statusFilter);
     }
     const { data, error } = await req;
-    if (error || !data || !data.length) throw new Error('Fallback demo');
-    return data as Referral[];
-  } catch {
-    if (statusFilter === 'all') return DEMO_REFERRALS;
-    return DEMO_REFERRALS.filter(r => r.status === statusFilter);
+    if (error) {
+      console.error('Supabase getReferrals error:', error);
+      throw error;
+    }
+    return (data ?? []) as Referral[];
+  } catch (err) {
+    console.error('getReferrals failed:', err);
+    return [];
   }
 }
 
@@ -288,37 +438,71 @@ export async function getFollowUps(statusFilter = 'all'): Promise<FollowUp[]> {
       req = req.eq('status', statusFilter);
     }
     const { data, error } = await req;
-    if (error || !data || !data.length) throw new Error('Fallback demo');
-    return data as FollowUp[];
-  } catch {
-    if (statusFilter === 'all') return DEMO_FOLLOWUPS;
-    return DEMO_FOLLOWUPS.filter(f => f.status === statusFilter);
+    if (error) {
+      console.error('Supabase getFollowUps error:', error);
+      throw error;
+    }
+    return (data ?? []) as FollowUp[];
+  } catch (err) {
+    console.error('getFollowUps failed:', err);
+    return [];
   }
+}
+
+export async function createFollowUp(input: {
+  patientId: string;
+  referralId?: string;
+  scheduledDate: string;
+  notes?: string;
+}): Promise<FollowUp> {
+  const { data: { user } } = await supabase.auth.getUser();
+
+  const { data, error } = await supabase
+    .from('follow_ups')
+    .insert({
+      patient_id: input.patientId,
+      referral_id: input.referralId ?? null,
+      scheduled_date: input.scheduledDate,
+      status: 'scheduled',
+      notes: input.notes ?? null,
+      updated_by: user?.id ?? null
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Supabase createFollowUp error:', error);
+    throw new Error(`Failed to create follow-up task: ${error.message}`);
+  }
+
+  await recordAuditLog({
+    action: 'CREATE_FOLLOW_UP',
+    entityType: 'follow_up',
+    entityId: data.id,
+    details: { patient_id: input.patientId, scheduled_date: input.scheduledDate }
+  });
+
+  return data as FollowUp;
 }
 
 export async function updateFollowUp(id: string, status: FollowUpStatus, notes?: string) {
   const { data: { user } } = await supabase.auth.getUser();
-  try {
-    const { error } = await supabase
-      .from('follow_ups')
-      .update({ status, notes, updated_by: user?.id, updated_at: new Date().toISOString() })
-      .eq('id', id);
-    if (error) throw error;
+  const { error } = await supabase
+    .from('follow_ups')
+    .update({ status, notes, updated_by: user?.id, updated_at: new Date().toISOString() })
+    .eq('id', id);
 
-    await recordAuditLog({
-      action: 'UPDATE_FOLLOW_UP',
-      entityType: 'follow_up',
-      entityId: id,
-      details: { status, notes }
-    });
-  } catch {
-    const found = DEMO_FOLLOWUPS.find(f => f.id === id);
-    if (found) {
-      found.status = status;
-      if (notes) found.notes = notes;
-      found.updated_at = new Date().toISOString();
-    }
+  if (error) {
+    console.error('Supabase updateFollowUp error:', error);
+    throw new Error(`Failed to update follow-up: ${error.message}`);
   }
+
+  await recordAuditLog({
+    action: 'UPDATE_FOLLOW_UP',
+    entityType: 'follow_up',
+    entityId: id,
+    details: { status, notes }
+  });
 }
 
 export async function getNotifications(): Promise<Notification[]> {
@@ -327,11 +511,15 @@ export async function getNotifications(): Promise<Notification[]> {
       .from('notifications')
       .select('*')
       .order('created_at', { ascending: false })
-      .limit(20);
-    if (error || !data || !data.length) throw new Error('Fallback demo');
-    return data as Notification[];
-  } catch {
-    return DEMO_NOTIFICATIONS;
+      .limit(30);
+    if (error) {
+      console.error('Supabase getNotifications error:', error);
+      throw error;
+    }
+    return (data ?? []) as Notification[];
+  } catch (err) {
+    console.error('getNotifications failed:', err);
+    return [];
   }
 }
 
@@ -351,16 +539,8 @@ export async function createNotification(input: {
       type: input.type,
       is_read: false
     });
-  } catch {
-    DEMO_NOTIFICATIONS.unshift({
-      id: `notif-${Date.now()}`,
-      patient_id: input.patientId ?? null,
-      title: input.title,
-      message: input.message,
-      type: input.type,
-      is_read: false,
-      created_at: new Date().toISOString()
-    });
+  } catch (err) {
+    console.error('createNotification failed:', err);
   }
 }
 
@@ -379,15 +559,8 @@ export async function recordAuditLog(input: {
       entity_id: input.entityId ?? null,
       details: input.details ?? null
     });
-  } catch {
-    DEMO_AUDIT_LOGS.unshift({
-      id: `audit-${Date.now()}`,
-      action: input.action,
-      entity_type: input.entityType,
-      entity_id: input.entityId ?? null,
-      details: input.details ?? null,
-      created_at: new Date().toISOString()
-    });
+  } catch (err) {
+    console.error('recordAuditLog failed:', err);
   }
 }
 
@@ -397,11 +570,15 @@ export async function getAuditLogs(): Promise<AuditLog[]> {
       .from('audit_logs')
       .select('*')
       .order('created_at', { ascending: false })
-      .limit(30);
-    if (error || !data || !data.length) throw new Error('Fallback demo');
-    return data as AuditLog[];
-  } catch {
-    return DEMO_AUDIT_LOGS;
+      .limit(50);
+    if (error) {
+      console.error('Supabase getAuditLogs error:', error);
+      throw error;
+    }
+    return (data ?? []) as AuditLog[];
+  } catch (err) {
+    console.error('getAuditLogs failed:', err);
+    return [];
   }
 }
 
@@ -411,10 +588,14 @@ export async function getHospitalReferrals(): Promise<Referral[]> {
       .from('referrals')
       .select('*, patient:patients(*)')
       .order('created_at', { ascending: false });
-    if (error || !data || !data.length) throw new Error('Fallback to demo referrals');
-    return data as Referral[];
-  } catch {
-    return DEMO_REFERRALS;
+    if (error) {
+      console.error('Supabase getHospitalReferrals error:', error);
+      throw error;
+    }
+    return (data ?? []) as Referral[];
+  } catch (err) {
+    console.error('getHospitalReferrals failed:', err);
+    return [];
   }
 }
 
@@ -428,52 +609,43 @@ export async function updateReferralStatus(
     treatmentSummary?: string;
   }
 ): Promise<boolean> {
-  try {
-    const updateData: Record<string, any> = { status };
-    if (details?.notes) updateData.clinical_notes = details.notes;
-    if (details?.ambulance) updateData.ambulance_assigned = details.ambulance;
-    if (details?.rejectionReason) updateData.rejection_reason = details.rejectionReason;
-    if (details?.treatmentSummary) updateData.treatment_summary = details.treatmentSummary;
+  const updateData: Record<string, any> = { status };
+  if (details?.notes) updateData.clinical_notes = details.notes;
+  if (details?.ambulance) updateData.ambulance_assigned = details.ambulance;
+  if (details?.rejectionReason) updateData.rejection_reason = details.rejectionReason;
+  if (details?.treatmentSummary) updateData.treatment_summary = details.treatmentSummary;
 
-    const { error } = await supabase
-      .from('referrals')
-      .update(updateData)
-      .eq('id', referralId);
+  const { error } = await supabase
+    .from('referrals')
+    .update(updateData)
+    .eq('id', referralId);
 
-    if (error) throw error;
-
-    // Log referral event
-    const { data: { user } } = await supabase.auth.getUser();
-    await supabase.from('referral_events').insert({
-      referral_id: referralId,
-      status,
-      changed_by: user?.id ?? null,
-      notes: details?.notes || details?.rejectionReason || details?.treatmentSummary || null,
-      ambulance_info: details?.ambulance ? { ambulance: details.ambulance } : null
-    });
-
-    await recordAuditLog({
-      action: `REFERRAL_STATUS_${status.toUpperCase()}`,
-      entityType: 'referral',
-      entityId: referralId,
-      details: { status, ...details }
-    });
-
-    return true;
-  } catch {
-    const target = DEMO_REFERRALS.find(r => r.id === referralId);
-    if (target) {
-      target.status = status;
-      if (details?.notes) target.clinical_notes = details.notes;
-      if (details?.ambulance) target.ambulance_assigned = details.ambulance;
-      if (details?.rejectionReason) target.rejection_reason = details.rejectionReason;
-      if (details?.treatmentSummary) target.treatment_summary = details.treatmentSummary;
-    }
-    return true;
+  if (error) {
+    console.error('Supabase updateReferralStatus error:', error);
+    throw new Error(`Failed to update referral status: ${error.message}`);
   }
+
+  // Insert event record
+  const { data: { user } } = await supabase.auth.getUser();
+  await supabase.from('referral_events').insert({
+    referral_id: referralId,
+    status,
+    changed_by: user?.id ?? null,
+    notes: details?.notes || details?.rejectionReason || details?.treatmentSummary || null,
+    ambulance_info: details?.ambulance ? { ambulance: details.ambulance } : null
+  });
+
+  await recordAuditLog({
+    action: `REFERRAL_STATUS_${status.toUpperCase()}`,
+    entityType: 'referral',
+    entityId: referralId,
+    details: { status, ...details }
+  });
+
+  return true;
 }
 
-export async function getPatientVisits(patientId: string): Promise<any[]> {
+export async function getPatientVisits(patientId: string): Promise<Visit[]> {
   try {
     const { data, error } = await supabase
       .from('visits')
@@ -481,27 +653,14 @@ export async function getPatientVisits(patientId: string): Promise<any[]> {
       .eq('patient_id', patientId)
       .order('created_at', { ascending: false });
 
-    if (error || !data) throw new Error('Fallback demo visits');
-    return data;
-  } catch {
-    return [
-      {
-        id: `v-demo-1`,
-        patient_id: patientId,
-        location: 'Rampur Sub-Center PHC',
-        chief_complaint: 'Routine Antenatal Checkup (ANC) & BP Monitoring',
-        symptoms: 'Mild fatigue, occasional headache',
-        observations: 'High blood pressure baseline observed',
-        vitals: { systolic_bp: 145, diastolic_bp: 92, pulse: 84, spo2: 98, weight_kg: 58 },
-        assessment: 'Hypertension Stage 1 in pregnancy - High Risk Priority',
-        treatment: 'Prescribed Methyldopa 250mg bd after doctor consultation',
-        prescription: 'Methyldopa 250mg BD x 14 days, Iron Folic Acid tab OD',
-        advice: 'Low salt diet, rest, weekly BP check by ASHA worker',
-        follow_up_date: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
-        notes: 'ASHA worker assigned for regular home visit monitoring.',
-        created_at: new Date(Date.now() - 3 * 86400000).toISOString()
-      }
-    ];
+    if (error) {
+      console.error('Supabase getPatientVisits error:', error);
+      throw error;
+    }
+    return (data ?? []) as Visit[];
+  } catch (err) {
+    console.error('getPatientVisits failed:', err);
+    return [];
   }
 }
 
@@ -519,41 +678,36 @@ export async function createVisit(input: {
   follow_up_date?: string;
   notes?: string;
 }) {
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    const { data, error } = await supabase.from('visits').insert({
-      patient_id: input.patient_id,
-      recorded_by: user?.id ?? null,
-      location: input.location || 'GramCare PHC Clinic',
-      chief_complaint: input.chief_complaint,
-      symptoms: input.symptoms,
-      observations: input.observations,
-      vitals: input.vitals || null,
-      assessment: input.assessment,
-      treatment: input.treatment,
-      prescription: input.prescription,
-      advice: input.advice,
-      follow_up_date: input.follow_up_date || null,
-      notes: input.notes
-    }).select().single();
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data, error } = await supabase.from('visits').insert({
+    patient_id: input.patient_id,
+    recorded_by: user?.id ?? null,
+    location: input.location || 'GramCare PHC Clinic',
+    chief_complaint: input.chief_complaint,
+    symptoms: input.symptoms,
+    observations: input.observations,
+    vitals: input.vitals || null,
+    assessment: input.assessment,
+    treatment: input.treatment,
+    prescription: input.prescription,
+    advice: input.advice,
+    follow_up_date: input.follow_up_date || null,
+    notes: input.notes
+  }).select().single();
 
-    if (error) throw error;
-
-    await recordAuditLog({
-      action: 'CREATE_VISIT',
-      entityType: 'visit',
-      entityId: data?.id,
-      details: { patient_id: input.patient_id }
-    });
-
-    return data;
-  } catch {
-    return {
-      id: `v-${Date.now()}`,
-      ...input,
-      created_at: new Date().toISOString()
-    };
+  if (error) {
+    console.error('Supabase createVisit error:', error);
+    throw new Error(`Failed to save visit record: ${error.message}`);
   }
+
+  await recordAuditLog({
+    action: 'CREATE_VISIT',
+    entityType: 'visit',
+    entityId: data?.id,
+    details: { patient_id: input.patient_id }
+  });
+
+  return data;
 }
 
 export async function overrideRiskAssessment(
@@ -561,24 +715,24 @@ export async function overrideRiskAssessment(
   newRiskLevel: string,
   reason: string
 ): Promise<boolean> {
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    await supabase.from('risk_assessments').update({
-      risk_level: newRiskLevel,
-      override_reason: reason,
-      overridden_by: user?.id ?? null
-    }).eq('id', assessmentId);
+  const { data: { user } } = await supabase.auth.getUser();
+  const { error } = await supabase.from('risk_assessments').update({
+    risk_level: newRiskLevel,
+    override_reason: reason,
+    overridden_by: user?.id ?? null
+  }).eq('id', assessmentId);
 
-    await recordAuditLog({
-      action: 'RISK_LEVEL_OVERRIDE',
-      entityType: 'risk_assessment',
-      entityId: assessmentId,
-      details: { newRiskLevel, reason }
-    });
-
-    return true;
-  } catch {
-    return true;
+  if (error) {
+    console.error('Supabase overrideRiskAssessment error:', error);
+    throw new Error(`Failed to override risk level: ${error.message}`);
   }
-}
 
+  await recordAuditLog({
+    action: 'RISK_LEVEL_OVERRIDE',
+    entityType: 'risk_assessment',
+    entityId: assessmentId,
+    details: { newRiskLevel, reason }
+  });
+
+  return true;
+}

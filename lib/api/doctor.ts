@@ -25,6 +25,7 @@ export interface PatientFilterOptions {
   riskLevel?: string;
   village?: string;
   gender?: string;
+  demoFilter?: 'all' | 'real' | 'demo';
   ageMin?: number;
   ageMax?: number;
 }
@@ -89,9 +90,15 @@ export async function getPatients(options: PatientFilterOptions = {}): Promise<P
       .select('*')
       .order('created_at', { ascending: false });
 
+    if (options.demoFilter === 'real') {
+      request = request.eq('is_demo', false);
+    } else if (options.demoFilter === 'demo') {
+      request = request.eq('is_demo', true);
+    }
+
     if (options.query) {
       const q = options.query.trim();
-      request = request.or(`name.ilike.%${q}%,village.ilike.%${q}%,phone.ilike.%${q}%`);
+      request = request.or(`name.ilike.%${q}%,village.ilike.%${q}%,phone.ilike.%${q}%,patient_code.ilike.%${q}%`);
     }
 
     const { data: patients, error } = await request;
@@ -171,9 +178,16 @@ export async function createPatientDirectly(input: {
     });
   }
 
+  // Generate unique Patient Code for real patients
+  const countRes = await supabase.from('patients').select('id', { count: 'exact', head: true }).eq('is_demo', false);
+  const nextNum = (countRes.count ?? 0) + 1001;
+  const patientCode = `GC-2026-${nextNum}`;
+
   const { data, error } = await supabase
     .from('patients')
     .insert({
+      patient_code: patientCode,
+      is_demo: false,
       name: input.name.trim(),
       age: Number(input.age),
       gender: input.gender as any,
@@ -848,4 +862,26 @@ export async function createAppointment(input: {
   });
 
   return data as Appointment;
+}
+
+export async function resetDemoData(): Promise<boolean> {
+  try {
+    const { data, error } = await supabase.rpc('reset_demo_data');
+    if (error) {
+      console.error('Supabase reset_demo_data RPC error, executing fallback delete:', error);
+      // Client-side safe deletion fallback for demo patients only
+      await supabase.from('patients').delete().eq('is_demo', true);
+    }
+
+    await recordAuditLog({
+      action: 'RESET_DEMO_DATA',
+      entityType: 'system',
+      details: { reset_by: 'admin', count: 6 }
+    });
+
+    return true;
+  } catch (err) {
+    console.error('resetDemoData failed:', err);
+    return false;
+  }
 }

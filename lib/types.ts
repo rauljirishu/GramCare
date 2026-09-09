@@ -47,6 +47,8 @@ export interface LifestyleRiskInfo {
 
 export interface Patient extends SyncMetadata {
   id: string;
+  patient_code?: string | null;
+  is_demo?: boolean;
   name: string;
   age: number;
   gender: string;

@@ -264,29 +264,7 @@ export async function createReferral(input: {
   }
 }
 
-export async function updateReferralStatus(id: string, status: ReferralStatus, notes?: string) {
-  try {
-    const { error } = await supabase
-      .from('referrals')
-      .update({ status, clinical_notes: notes })
-      .eq('id', id);
 
-    if (error) throw error;
-
-    await recordAuditLog({
-      action: 'UPDATE_REFERRAL_STATUS',
-      entityType: 'referral',
-      entityId: id,
-      details: { new_status: status, notes }
-    });
-  } catch {
-    const target = DEMO_REFERRALS.find(r => r.id === id);
-    if (target) {
-      target.status = status;
-      if (notes) target.clinical_notes = notes;
-    }
-  }
-}
 
 export async function getReferrals(statusFilter = 'all'): Promise<Referral[]> {
   try {
@@ -426,3 +404,181 @@ export async function getAuditLogs(): Promise<AuditLog[]> {
     return DEMO_AUDIT_LOGS;
   }
 }
+
+export async function getHospitalReferrals(): Promise<Referral[]> {
+  try {
+    const { data, error } = await supabase
+      .from('referrals')
+      .select('*, patient:patients(*)')
+      .order('created_at', { ascending: false });
+    if (error || !data || !data.length) throw new Error('Fallback to demo referrals');
+    return data as Referral[];
+  } catch {
+    return DEMO_REFERRALS;
+  }
+}
+
+export async function updateReferralStatus(
+  referralId: string,
+  status: ReferralStatus,
+  details?: {
+    notes?: string;
+    ambulance?: string;
+    rejectionReason?: string;
+    treatmentSummary?: string;
+  }
+): Promise<boolean> {
+  try {
+    const updateData: Record<string, any> = { status };
+    if (details?.notes) updateData.clinical_notes = details.notes;
+    if (details?.ambulance) updateData.ambulance_assigned = details.ambulance;
+    if (details?.rejectionReason) updateData.rejection_reason = details.rejectionReason;
+    if (details?.treatmentSummary) updateData.treatment_summary = details.treatmentSummary;
+
+    const { error } = await supabase
+      .from('referrals')
+      .update(updateData)
+      .eq('id', referralId);
+
+    if (error) throw error;
+
+    // Log referral event
+    const { data: { user } } = await supabase.auth.getUser();
+    await supabase.from('referral_events').insert({
+      referral_id: referralId,
+      status,
+      changed_by: user?.id ?? null,
+      notes: details?.notes || details?.rejectionReason || details?.treatmentSummary || null,
+      ambulance_info: details?.ambulance ? { ambulance: details.ambulance } : null
+    });
+
+    await recordAuditLog({
+      action: `REFERRAL_STATUS_${status.toUpperCase()}`,
+      entityType: 'referral',
+      entityId: referralId,
+      details: { status, ...details }
+    });
+
+    return true;
+  } catch {
+    const target = DEMO_REFERRALS.find(r => r.id === referralId);
+    if (target) {
+      target.status = status;
+      if (details?.notes) target.clinical_notes = details.notes;
+      if (details?.ambulance) target.ambulance_assigned = details.ambulance;
+      if (details?.rejectionReason) target.rejection_reason = details.rejectionReason;
+      if (details?.treatmentSummary) target.treatment_summary = details.treatmentSummary;
+    }
+    return true;
+  }
+}
+
+export async function getPatientVisits(patientId: string): Promise<any[]> {
+  try {
+    const { data, error } = await supabase
+      .from('visits')
+      .select('*')
+      .eq('patient_id', patientId)
+      .order('created_at', { ascending: false });
+
+    if (error || !data) throw new Error('Fallback demo visits');
+    return data;
+  } catch {
+    return [
+      {
+        id: `v-demo-1`,
+        patient_id: patientId,
+        location: 'Rampur Sub-Center PHC',
+        chief_complaint: 'Routine Antenatal Checkup (ANC) & BP Monitoring',
+        symptoms: 'Mild fatigue, occasional headache',
+        observations: 'High blood pressure baseline observed',
+        vitals: { systolic_bp: 145, diastolic_bp: 92, pulse: 84, spo2: 98, weight_kg: 58 },
+        assessment: 'Hypertension Stage 1 in pregnancy - High Risk Priority',
+        treatment: 'Prescribed Methyldopa 250mg bd after doctor consultation',
+        prescription: 'Methyldopa 250mg BD x 14 days, Iron Folic Acid tab OD',
+        advice: 'Low salt diet, rest, weekly BP check by ASHA worker',
+        follow_up_date: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
+        notes: 'ASHA worker assigned for regular home visit monitoring.',
+        created_at: new Date(Date.now() - 3 * 86400000).toISOString()
+      }
+    ];
+  }
+}
+
+export async function createVisit(input: {
+  patient_id: string;
+  location?: string;
+  chief_complaint?: string;
+  symptoms?: string;
+  observations?: string;
+  vitals?: Record<string, any>;
+  assessment?: string;
+  treatment?: string;
+  prescription?: string;
+  advice?: string;
+  follow_up_date?: string;
+  notes?: string;
+}) {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data, error } = await supabase.from('visits').insert({
+      patient_id: input.patient_id,
+      recorded_by: user?.id ?? null,
+      location: input.location || 'GramCare PHC Clinic',
+      chief_complaint: input.chief_complaint,
+      symptoms: input.symptoms,
+      observations: input.observations,
+      vitals: input.vitals || null,
+      assessment: input.assessment,
+      treatment: input.treatment,
+      prescription: input.prescription,
+      advice: input.advice,
+      follow_up_date: input.follow_up_date || null,
+      notes: input.notes
+    }).select().single();
+
+    if (error) throw error;
+
+    await recordAuditLog({
+      action: 'CREATE_VISIT',
+      entityType: 'visit',
+      entityId: data?.id,
+      details: { patient_id: input.patient_id }
+    });
+
+    return data;
+  } catch {
+    return {
+      id: `v-${Date.now()}`,
+      ...input,
+      created_at: new Date().toISOString()
+    };
+  }
+}
+
+export async function overrideRiskAssessment(
+  assessmentId: string,
+  newRiskLevel: string,
+  reason: string
+): Promise<boolean> {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    await supabase.from('risk_assessments').update({
+      risk_level: newRiskLevel,
+      override_reason: reason,
+      overridden_by: user?.id ?? null
+    }).eq('id', assessmentId);
+
+    await recordAuditLog({
+      action: 'RISK_LEVEL_OVERRIDE',
+      entityType: 'risk_assessment',
+      entityId: assessmentId,
+      details: { newRiskLevel, reason }
+    });
+
+    return true;
+  } catch {
+    return true;
+  }
+}
+

@@ -18,7 +18,8 @@ import {
   Settings,
   LogOut,
   Stethoscope,
-  ShieldCheck
+  ShieldCheck,
+  Building2
 } from 'lucide-react';
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
@@ -53,6 +54,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     { href: '/patients', labelKey: 'navPatients', icon: <Users className="h-4 w-4" /> },
     { href: '/high-risk', labelKey: 'navHighRisk', icon: <AlertTriangle className="h-4 w-4 text-rose-400" /> },
     { href: '/referrals', labelKey: 'navReferrals', icon: <ArrowUpRight className="h-4 w-4 text-violet-400" /> },
+    { href: '/hospital', labelKey: 'navHospital', icon: <Building2 className="h-4 w-4 text-emerald-400" /> },
     { href: '/follow-ups', labelKey: 'navFollowUps', icon: <CalendarCheck className="h-4 w-4 text-emerald-400" /> },
     { href: '/workspace', labelKey: 'navWorkspace', icon: <UserPlus className="h-4 w-4 text-blue-400" /> },
     { href: '/analytics', labelKey: 'navAnalytics', icon: <BarChart3 className="h-4 w-4 text-indigo-400" /> },

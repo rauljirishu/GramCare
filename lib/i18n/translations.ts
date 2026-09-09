@@ -13,12 +13,14 @@ export const translations: TranslationDictionary = {
   appTagline: { en: 'Rural Healthcare Platform', hi: 'ग्रामीण स्वास्थ्य सेवा मंच' },
   doctorPortal: { en: 'Doctor & Clinical Portal', hi: 'चिकित्सक और नैदानिक पोर्टल' },
   adminPortal: { en: 'Health Admin Control Center', hi: 'स्वास्थ्य प्रशासन नियंत्रण केंद्र' },
+  hospitalPortal: { en: 'Hospital Referral & Emergency Care Portal', hi: 'अस्पताल रेफरल और आपातकालीन देखभाल पोर्टल' },
   
   // Navigation Items
   navDashboard: { en: 'Doctor Dashboard', hi: 'डैशबोर्ड' },
   navPatients: { en: 'Patient Records', hi: 'मरीज़ रिकॉर्ड' },
   navHighRisk: { en: 'High-Risk Triage', hi: 'उच्च जोखिम ट्रायेज' },
   navReferrals: { en: 'Digital Referrals', hi: 'डिजिटल रेफरल' },
+  navHospital: { en: 'Hospital Portal', hi: 'अस्पताल पोर्टल' },
   navFollowUps: { en: 'Follow-up Tasks', hi: 'फॉलो-अप कार्य' },
   navWorkspace: { en: 'ASHA Mobile Intake', hi: 'आशा मोबाइल इनटेक' },
   navAnalytics: { en: 'Health Analytics', hi: 'स्वास्थ्य विश्लेषण' },
@@ -37,6 +39,21 @@ export const translations: TranslationDictionary = {
   activeFollowUps: { en: 'Active Follow-ups', hi: 'सक्रिय फॉलो-अप' },
   missedFollowUps: { en: 'Missed Follow-ups', hi: 'छूटे हुए फॉलो-अप' },
   priorityPatients: { en: 'Priority Patient Triage (Sorted by Risk)', hi: 'प्राथमिकता मरीज़ ट्रायेज (जोखिम अनुसार)' },
+
+  // Hospital Dashboard Labels
+  incomingReferrals: { en: 'Incoming Referrals', hi: 'आगमन रेफरल' },
+  urgentReferrals: { en: 'Urgent Referrals', hi: 'आपातकालीन रेफरल' },
+  acceptedReferrals: { en: 'Accepted Referrals', hi: 'स्वीकृत रेफरल' },
+  inTransitPatients: { en: 'Patients in Transit', hi: 'रास्ते में मरीज़' },
+  arrivedPatients: { en: 'Arrived Patients', hi: 'पहुंचे हुए मरीज़' },
+  treatmentStarted: { en: 'Treatment Started', hi: 'इलाज शुरू' },
+  completedReferrals: { en: 'Completed Referrals', hi: 'पूर्ण रेफरल' },
+  acceptReferral: { en: 'Accept Referral', hi: 'रेफरल स्वीकार करें' },
+  rejectReferral: { en: 'Reject Referral', hi: 'रेफरल अस्वीकार करें' },
+  markInTransit: { en: 'Mark In Transit (108 Ambulance)', hi: 'रास्ते में दर्ज करें (108 एम्बुलेंस)' },
+  markArrived: { en: 'Mark Patient Arrived', hi: 'मरीज़ आगमन दर्ज करें' },
+  startTreatment: { en: 'Start Clinical Treatment', hi: 'इलाज शुरू करें' },
+  completeTreatment: { en: 'Complete & Discharge', hi: 'इलाज पूर्ण और डिस्चार्ज' },
 
   // Clinical Actions & Filters
   searchPlaceholder: { en: 'Search name or village…', hi: 'नाम या गाँव से खोजें…' },

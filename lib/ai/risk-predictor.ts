@@ -12,8 +12,14 @@ export interface VitalsInput {
   temperatureC?: number | null;
   pulseBpm?: number | null;
   spo2?: number | null;
+  respiratoryRate?: number | null;
+  hemoglobin?: number | null;
+  heightCm?: number | null;
+  weightKg?: number | null;
+  bmi?: number | null;
   symptoms?: string | null;
   existingConditions?: string[] | null;
+  familyHistory?: string | null;
 }
 
 export interface PredictionResult {
@@ -38,6 +44,8 @@ export function predictOfflineRisk(vitals: VitalsInput): PredictionResult {
   const temp = vitals.temperatureC;
   const pulse = vitals.pulseBpm;
   const spo2 = vitals.spo2;
+  const resp = vitals.respiratoryRate;
+  const hb = vitals.hemoglobin;
   const sx = (vitals.symptoms || '').toLowerCase();
   const conditions = (vitals.existingConditions || []).map(c => c.toLowerCase());
 
@@ -119,6 +127,26 @@ export function predictOfflineRisk(vitals: VitalsInput): PredictionResult {
     }
   }
 
+  if (resp !== undefined && resp !== null) {
+    if (resp >= 30 || resp <= 10) {
+      score += 30;
+      warnings.push(`Abnormal Respiratory Rate (${resp} breaths/min)`);
+      factors.push('Respiratory distress signal');
+    }
+  }
+
+  if (hb !== undefined && hb !== null) {
+    if (hb < 7.0) {
+      score += 40;
+      warnings.push(`Severe Anemia (Hb ${hb} g/dL)`);
+      factors.push('Critical low hemoglobin');
+    } else if (hb < 10.0) {
+      score += 20;
+      warnings.push(`Moderate Anemia (Hb ${hb} g/dL)`);
+      factors.push('Low hemoglobin');
+    }
+  }
+
   const highRiskKeywords = ['chest pain', 'breathlessness', 'shortness of breath', 'bleeding', 'seizure', 'unconscious', 'convulsion', 'blurry vision', 'severe headache'];
   const medRiskKeywords = ['fever', 'cough', 'vomiting', 'dizziness', 'swelling', 'edema', 'fatigue', 'pain'];
 
@@ -172,7 +200,7 @@ export function predictOfflineRisk(vitals: VitalsInput): PredictionResult {
     warningSignals: warnings.length ? warnings : ['All vitals within normal clinical thresholds'],
     contributingFactors: factors.length ? factors : ['Standard vitals baseline'],
     recommendedAction,
-    modelVersion: 'GramCare-AI-ClinicalScoring-v2.1',
+    modelVersion: 'GramCare-AI-ClinicalScoring-v3.0',
     disclaimer: AI_DISCLAIMER_TEXT
   };
 }

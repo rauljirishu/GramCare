@@ -17,7 +17,9 @@ import {
   ArrowRight,
   Sparkles,
   AlertCircle,
-  HelpCircle
+  HelpCircle,
+  LogIn,
+  CheckCircle2
 } from 'lucide-react';
 
 const roles = [
@@ -54,6 +56,7 @@ export default function SignUpPage() {
     facility: ''
   });
   const [error, setError] = useState('');
+  const [rateLimitNotice, setRateLimitNotice] = useState(false);
   const [disabledNotice, setDisabledNotice] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -61,10 +64,52 @@ export default function SignUpPage() {
     setForm(current => ({ ...current, [key]: value }));
   };
 
+  async function handleDirectLogin() {
+    const email = form.email.trim().toLowerCase();
+    if (!email || !form.password) {
+      router.push('/login');
+      return;
+    }
+    setBusy(true);
+    try {
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password: form.password
+      });
+
+      if (signInError) {
+        // Direct to login page with prefilled email
+        router.push(`/login?email=${encodeURIComponent(email)}`);
+        return;
+      }
+
+      if (signInData?.session && signInData?.user) {
+        await supabase.from('users').upsert({
+          id: signInData.user.id,
+          name: form.name.trim() || 'Health Worker',
+          phone: form.phone.replace(/\s/g, ''),
+          email: email,
+          role: role
+        }, { onConflict: 'id' });
+
+        if (role === 'doctor' || role === 'admin') {
+          router.replace('/dashboard');
+        } else {
+          router.replace('/workspace');
+        }
+      }
+    } catch {
+      router.push(`/login?email=${encodeURIComponent(email)}`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function submit(event: FormEvent) {
     event.preventDefault();
     setError('');
     setDisabledNotice(false);
+    setRateLimitNotice(false);
 
     if (form.password.length < 6) {
       return setError('Password must be at least 6 characters.');
@@ -81,6 +126,7 @@ export default function SignUpPage() {
     setBusy(true);
 
     try {
+      // 1. Attempt Supabase Auth Sign Up
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email,
         password: form.password,
@@ -94,10 +140,12 @@ export default function SignUpPage() {
         }
       });
 
+      // 2. If Sign Up returns error (e.g. rate limit or email confirmation issue)
       if (signUpError) {
-        const isRateLimit = signUpError.message.toLowerCase().includes('rate limit');
+        const isRateLimit = signUpError.message.toLowerCase().includes('rate limit') || signUpError.status === 429;
         const isDisabled = signUpError.message.toLowerCase().includes('disabled');
 
+        // First attempt direct sign-in in case account already exists
         const { data: directSignIn } = await supabase.auth.signInWithPassword({
           email,
           password: form.password
@@ -120,6 +168,14 @@ export default function SignUpPage() {
           return;
         }
 
+        if (isRateLimit) {
+          setRateLimitNotice(true);
+          setError(
+            'Supabase Email Rate Limit Reached: Email confirmation limit exceeded. Click below to log in directly with your credentials or turn OFF "Confirm email" in Supabase Dashboard.'
+          );
+          return;
+        }
+
         if (isDisabled) {
           setDisabledNotice(true);
           setError(
@@ -128,17 +184,11 @@ export default function SignUpPage() {
           return;
         }
 
-        if (isRateLimit) {
-          setError(
-            'Supabase Email Rate Limit Reached: Go to Supabase Dashboard > Authentication > Providers > Email and turn OFF "Confirm email". In the meantime, try logging in directly if your account exists.'
-          );
-          return;
-        }
-
         setError(signUpError.message);
         return;
       }
 
+      // 3. Attempt immediate post-signup sign-in
       const { data: signInData } = await supabase.auth.signInWithPassword({
         email,
         password: form.password
@@ -201,9 +251,40 @@ export default function SignUpPage() {
             <div role="alert" className="mt-6 rounded-2xl bg-rose-50 border border-rose-200 p-5 text-sm font-semibold leading-6 text-rose-800">
               <div className="flex items-start gap-3">
                 <AlertCircle className="h-6 w-6 shrink-0 text-rose-600" />
-                <div>
-                  <span className="font-extrabold text-rose-900">{error}</span>
-                  {disabledNotice ? (
+                <div className="flex-1">
+                  <span className="font-extrabold text-rose-900 block">{error}</span>
+
+                  {rateLimitNotice && (
+                    <div className="mt-4 rounded-xl bg-amber-50 border border-amber-300 p-4 text-amber-950 font-normal">
+                      <p className="font-bold flex items-center gap-1.5 text-amber-950 text-sm">
+                        <HelpCircle className="h-4.5 w-4.5 text-amber-700" />
+                        Quick Solutions for Rate Limit Error:
+                      </p>
+                      <ul className="mt-2 space-y-1.5 text-xs text-amber-900 leading-5">
+                        <li className="flex items-start gap-1.5">
+                          <span>1.</span>
+                          <span><strong>Log In Directly:</strong> If your account was registered, click the button below to sign in instantly.</span>
+                        </li>
+                        <li className="flex items-start gap-1.5">
+                          <span>2.</span>
+                          <span><strong>Turn OFF "Confirm email" in Supabase:</strong> Open <em>Supabase Dashboard → Authentication → Email → Turn OFF "Confirm email"</em>.</span>
+                        </li>
+                      </ul>
+
+                      <div className="mt-4 flex flex-wrap gap-3">
+                        <button
+                          type="button"
+                          onClick={handleDirectLogin}
+                          className="inline-flex items-center gap-2 rounded-xl bg-amber-700 px-4 py-2 text-xs font-extrabold text-white shadow-sm hover:bg-amber-800 transition"
+                        >
+                          <LogIn className="h-4 w-4" />
+                          <span>Try Logging In Directly Now</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {disabledNotice && (
                     <div className="mt-3 rounded-xl bg-amber-50 border border-amber-200 p-4 text-amber-900 font-normal">
                       <p className="font-bold flex items-center gap-1.5 text-amber-950 text-sm">
                         <HelpCircle className="h-4 w-4 text-amber-700" />
@@ -217,12 +298,18 @@ export default function SignUpPage() {
                         <li>Click <strong>Save</strong> and try signing up again.</li>
                       </ol>
                     </div>
-                  ) : (
+                  )}
+
+                  {!rateLimitNotice && !disabledNotice && (
                     <p className="mt-2 font-normal text-rose-700">
                       Tip: If your account was already created, try{' '}
-                      <Link href="/login" className="font-bold underline text-rose-900">
+                      <button
+                        type="button"
+                        onClick={handleDirectLogin}
+                        className="font-bold underline text-rose-900"
+                      >
                         logging in directly
-                      </Link>.
+                      </button>.
                     </p>
                   )}
                 </div>
@@ -331,9 +418,13 @@ export default function SignUpPage() {
 
           <p className="mt-6 text-center text-sm font-semibold text-slate-600">
             Already have an account?{' '}
-            <Link href="/login" className="font-extrabold text-blue-700 hover:underline">
+            <button
+              type="button"
+              onClick={handleDirectLogin}
+              className="font-extrabold text-blue-700 hover:underline"
+            >
               Log in directly
-            </Link>
+            </button>
           </p>
         </form>
       </div>

@@ -29,6 +29,10 @@ export default function LoginPage() {
     if (params.get('created') === '1') {
       setNotice('Your account was created successfully! Please log in with your email and password below.');
     }
+    const emailParam = params.get('email');
+    if (emailParam) {
+      setEmail(emailParam);
+    }
   }, []);
 
   async function submit(event: FormEvent) {

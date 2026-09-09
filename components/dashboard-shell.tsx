@@ -1,5 +1,99 @@
 'use client';
+
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-const nav = [['/dashboard','Overview'],['/patients','Patients'],['/high-risk','High risk'],['/follow-ups','Follow-ups']];
-export function DashboardShell({children}:{children:React.ReactNode}) { const path = usePathname(); return <div className="min-h-screen md:flex"><aside className="border-b border-brand-900 bg-brand-900 px-5 py-5 text-white md:min-h-screen md:w-64 md:border-b-0"><Link href="/dashboard" className="text-xl font-bold">Gram<span className="text-emerald-300">Swasthya</span></Link><p className="mt-1 text-xs text-emerald-100">Doctor Portal</p><nav className="mt-6 flex gap-2 overflow-x-auto md:block md:space-y-1">{nav.map(([href,label]) => <Link key={href} href={href} className={`block whitespace-nowrap rounded-lg px-3 py-2 text-sm ${path === href ? 'bg-white/15 font-semibold' : 'text-emerald-100 hover:bg-white/10'}`}>{label}</Link>)}</nav></aside><main className="min-w-0 flex-1 p-4 sm:p-7">{children}</main></div>; }
+import { usePathname, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase/client';
+import { 
+  LayoutDashboard, 
+  Users, 
+  AlertTriangle, 
+  CalendarCheck, 
+  LogOut,
+  Stethoscope,
+  ShieldCheck
+} from 'lucide-react';
+
+const nav = [
+  { href: '/dashboard', label: 'Overview', icon: <LayoutDashboard className="h-4 w-4" /> },
+  { href: '/patients', label: 'Patients', icon: <Users className="h-4 w-4" /> },
+  { href: '/high-risk', label: 'High Risk', icon: <AlertTriangle className="h-4 w-4" /> },
+  { href: '/follow-ups', label: 'Follow-ups', icon: <CalendarCheck className="h-4 w-4" /> },
+];
+
+export function DashboardShell({ children }: { children: React.ReactNode }) {
+  const path = usePathname();
+  const router = useRouter();
+  const [userRole, setUserRole] = useState<'doctor' | 'admin' | 'asha'>('doctor');
+
+  useEffect(() => {
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase.from('users').select('role').eq('id', user.id).single();
+        if (profile?.role) {
+          setUserRole(profile.role);
+        }
+      }
+    })();
+  }, []);
+
+  async function signOut() {
+    await supabase.auth.signOut();
+    router.replace('/');
+  }
+
+  const portalTitle = userRole === 'admin' ? 'Health Admin Portal' : 'Doctor & Clinical Portal';
+  const PortalIcon = userRole === 'admin' ? ShieldCheck : Stethoscope;
+
+  return (
+    <div className="min-h-screen md:flex bg-slate-50">
+      <aside className="border-b border-slate-800 bg-slate-900 px-6 py-7 text-white md:min-h-screen md:w-72 md:border-b-0 flex flex-col justify-between">
+        <div>
+          <Link href="/dashboard" className="flex items-center gap-2.5 text-2xl font-black tracking-tight text-white">
+            <span className="grid h-9 w-9 place-items-center rounded-xl bg-blue-600 text-base font-black text-white shadow-md">+</span>
+            Gram<span className="text-blue-400">Care</span>
+          </Link>
+          <div className="mt-2 flex items-center gap-2 text-xs font-bold text-blue-200 bg-white/10 px-3 py-1.5 rounded-xl backdrop-blur">
+            <PortalIcon className="h-4 w-4 text-blue-400" />
+            <span>{portalTitle}</span>
+          </div>
+
+          <nav className="mt-8 flex gap-2 overflow-x-auto md:block md:space-y-2">
+            {nav.map((item) => {
+              const active = path === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex items-center gap-3 whitespace-nowrap rounded-xl px-4 py-3 text-sm font-extrabold transition-all duration-200 ${
+                    active
+                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30 scale-[1.02]'
+                      : 'text-slate-300 hover:bg-white/10 hover:text-white'
+                  }`}
+                >
+                  {item.icon}
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+
+        <div className="mt-8 pt-4 border-t border-slate-800">
+          <button
+            onClick={signOut}
+            className="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-extrabold text-slate-400 hover:bg-rose-500/20 hover:text-rose-300 transition"
+          >
+            <LogOut className="h-4 w-4" />
+            <span>Sign out</span>
+          </button>
+        </div>
+      </aside>
+
+      <main className="min-w-0 flex-1 p-5 sm:p-9">
+        {children}
+      </main>
+    </div>
+  );
+}

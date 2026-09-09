@@ -13,7 +13,10 @@ import type {
   AuditLog, 
   FollowUp,
   Visit,
-  RiskLevel
+  RiskLevel,
+  Facility,
+  DoctorUser,
+  Appointment
 } from '@/lib/types';
 import { predictOfflineRisk } from '@/lib/ai/risk-predictor';
 
@@ -747,4 +750,102 @@ export async function overrideRiskAssessment(
   });
 
   return true;
+}
+
+export async function getFacilities(): Promise<Facility[]> {
+  try {
+    const { data, error } = await supabase
+      .from('facilities')
+      .select('*')
+      .order('name');
+    if (error) {
+      console.error('Supabase getFacilities error:', error);
+      throw error;
+    }
+    return (data ?? []) as Facility[];
+  } catch (err) {
+    console.error('getFacilities failed:', err);
+    return [];
+  }
+}
+
+export async function getDoctors(): Promise<DoctorUser[]> {
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*, facility:facilities(*)')
+      .eq('role', 'doctor')
+      .order('name');
+    if (error) {
+      console.error('Supabase getDoctors error:', error);
+      throw error;
+    }
+    return (data ?? []) as DoctorUser[];
+  } catch (err) {
+    console.error('getDoctors failed:', err);
+    return [];
+  }
+}
+
+export async function getAppointments(): Promise<Appointment[]> {
+  try {
+    const { data, error } = await supabase
+      .from('appointments')
+      .select('*, patient:patients(*), doctor:users(*), facility:facilities(*)')
+      .order('appointment_date', { ascending: true });
+    if (error) {
+      console.error('Supabase getAppointments error:', error);
+      throw error;
+    }
+    return (data ?? []) as Appointment[];
+  } catch (err) {
+    console.error('getAppointments failed:', err);
+    return [];
+  }
+}
+
+export async function createAppointment(input: {
+  patientId: string;
+  doctorId?: string;
+  facilityId?: string;
+  referralId?: string;
+  appointmentDate: string;
+  purpose: string;
+  clinicalNotes?: string;
+}): Promise<Appointment> {
+  const { data, error } = await supabase
+    .from('appointments')
+    .insert({
+      patient_id: input.patientId,
+      doctor_id: input.doctorId ?? null,
+      facility_id: input.facilityId ?? null,
+      referral_id: input.referralId ?? null,
+      appointment_date: input.appointmentDate,
+      purpose: input.purpose,
+      clinical_notes: input.clinicalNotes ?? null,
+      status: 'scheduled'
+    })
+    .select('*, patient:patients(*), doctor:users(*), facility:facilities(*)')
+    .single();
+
+  if (error) {
+    console.error('Supabase createAppointment error:', error);
+    throw new Error(`Failed to schedule appointment: ${error.message}`);
+  }
+
+  await recordAuditLog({
+    action: 'CREATE_APPOINTMENT',
+    entityType: 'appointment',
+    entityId: data.id,
+    details: { patient_id: input.patientId, appointment_date: input.appointmentDate }
+  });
+
+  await createNotification({
+    patientId: input.patientId,
+    title: 'New Clinical Appointment Scheduled',
+    message: `Appointment set for ${new Date(input.appointmentDate).toLocaleString()} - ${input.purpose}`,
+    type: 'referral'
+  });
+
+  return data as Appointment;
 }

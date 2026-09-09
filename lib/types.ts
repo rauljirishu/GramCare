@@ -237,3 +237,47 @@ export interface SyncQueueItem {
   attempts: number;
   lastError?: string | null;
 }
+
+export interface Facility {
+  id: string;
+  name: string;
+  code?: string | null;
+  village?: string | null;
+  address?: string | null;
+  facility_type?: string | null;
+  services?: string[] | null;
+  status?: string | null;
+  created_at?: string;
+}
+
+export interface DoctorUser {
+  id: string;
+  name: string;
+  role: UserRole;
+  phone?: string | null;
+  email?: string | null;
+  facility_id?: string | null;
+  specialization?: string | null;
+  designation?: string | null;
+  department?: string | null;
+  availability?: string | null;
+  status?: string | null;
+  facility?: Facility | null;
+  created_at?: string;
+}
+
+export interface Appointment {
+  id: string;
+  patient_id: string;
+  doctor_id?: string | null;
+  facility_id?: string | null;
+  referral_id?: string | null;
+  appointment_date: string;
+  purpose: string;
+  status: 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled';
+  clinical_notes?: string | null;
+  created_at: string;
+  patient?: Patient;
+  doctor?: DoctorUser;
+  facility?: Facility;
+}

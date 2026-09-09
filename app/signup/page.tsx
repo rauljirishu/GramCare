@@ -17,9 +17,7 @@ import {
   ArrowRight,
   Sparkles,
   AlertCircle,
-  HelpCircle,
-  LogIn,
-  CheckCircle2
+  LogIn
 } from 'lucide-react';
 
 const roles = [
@@ -56,60 +54,15 @@ export default function SignUpPage() {
     facility: ''
   });
   const [error, setError] = useState('');
-  const [rateLimitNotice, setRateLimitNotice] = useState(false);
-  const [disabledNotice, setDisabledNotice] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const update = (key: keyof typeof form, value: string) => {
     setForm(current => ({ ...current, [key]: value }));
   };
 
-  async function handleDirectLogin() {
-    const email = form.email.trim().toLowerCase();
-    if (!email || !form.password) {
-      router.push('/login');
-      return;
-    }
-    setBusy(true);
-    try {
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password: form.password
-      });
-
-      if (signInError) {
-        // Direct to login page with prefilled email
-        router.push(`/login?email=${encodeURIComponent(email)}`);
-        return;
-      }
-
-      if (signInData?.session && signInData?.user) {
-        await supabase.from('users').upsert({
-          id: signInData.user.id,
-          name: form.name.trim() || 'Health Worker',
-          phone: form.phone.replace(/\s/g, ''),
-          email: email,
-          role: role
-        }, { onConflict: 'id' });
-
-        if (role === 'doctor' || role === 'admin') {
-          router.replace('/dashboard');
-        } else {
-          router.replace('/workspace');
-        }
-      }
-    } catch {
-      router.push(`/login?email=${encodeURIComponent(email)}`);
-    } finally {
-      setBusy(false);
-    }
-  }
-
   async function submit(event: FormEvent) {
     event.preventDefault();
     setError('');
-    setDisabledNotice(false);
-    setRateLimitNotice(false);
 
     if (form.password.length < 6) {
       return setError('Password must be at least 6 characters.');
@@ -126,11 +79,12 @@ export default function SignUpPage() {
     setBusy(true);
 
     try {
-      // 1. Attempt Supabase Auth Sign Up
+      // 1. Supabase Auth Email/Password SignUp with Metadata
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email,
         password: form.password,
         options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
           data: {
             name: form.name.trim(),
             phone: cleanPhone,
@@ -140,83 +94,30 @@ export default function SignUpPage() {
         }
       });
 
-      // 2. If Sign Up returns error (e.g. rate limit or email confirmation issue)
+      // 2. Handle Errors (Requirement 3: Clean user-friendly errors)
       if (signUpError) {
-        const isRateLimit = signUpError.message.toLowerCase().includes('rate limit') || signUpError.status === 429;
-        const isDisabled = signUpError.message.toLowerCase().includes('disabled');
-
-        // First attempt direct sign-in in case account already exists
-        const { data: directSignIn } = await supabase.auth.signInWithPassword({
-          email,
-          password: form.password
-        });
-
-        if (directSignIn?.session && directSignIn?.user) {
-          await supabase.from('users').upsert({
-            id: directSignIn.user.id,
-            name: form.name.trim(),
-            phone: cleanPhone,
-            email: email,
-            role: role
-          }, { onConflict: 'id' });
-
-          if (role === 'doctor' || role === 'admin') {
-            router.replace('/dashboard');
-          } else {
-            router.replace('/workspace');
-          }
-          return;
+        const msg = signUpError.message.toLowerCase();
+        if (msg.includes('rate limit') || signUpError.status === 429) {
+          setError('Unable to send the verification email right now. Please try again in a moment.');
+        } else if (msg.includes('already registered') || msg.includes('already exists')) {
+          setError('An account with this email address already exists. Please log in or verify your email.');
+        } else if (msg.includes('disabled')) {
+          setError('Email signups are currently disabled in the server authentication setup.');
+        } else {
+          setError(signUpError.message);
         }
-
-        if (isRateLimit) {
-          setRateLimitNotice(true);
-          setError(
-            'Supabase Email Rate Limit Reached: Email confirmation limit exceeded. Click below to log in directly with your credentials or turn OFF "Confirm email" in Supabase Dashboard.'
-          );
-          return;
-        }
-
-        if (isDisabled) {
-          setDisabledNotice(true);
-          setError(
-            'Email signups are currently disabled in your Supabase project configuration.'
-          );
-          return;
-        }
-
-        setError(signUpError.message);
         return;
       }
 
-      // 3. Attempt immediate post-signup sign-in
-      const { data: signInData } = await supabase.auth.signInWithPassword({
-        email,
-        password: form.password
-      });
-
-      const user = signInData?.user || signUpData?.user;
-
-      if (user) {
-        await supabase.from('users').upsert({
-          id: user.id,
-          name: form.name.trim(),
-          phone: cleanPhone,
-          email: email,
-          role: role
-        }, { onConflict: 'id' });
-      }
-
-      if (signInData?.session) {
-        if (role === 'doctor' || role === 'admin') {
-          router.replace('/dashboard');
-        } else {
-          router.replace('/workspace');
-        }
+      // 3. Check User Creation: Do NOT auto-login, do NOT issue sessions, do NOT grant dashboard access
+      if (signUpData?.user) {
+        // Redirect user to email verification prompt
+        router.push(`/verify-email?email=${encodeURIComponent(email)}`);
       } else {
-        router.replace('/login?created=1');
+        router.push('/login?created=1');
       }
-    } catch (err: any) {
-      setError(err?.message || 'An unexpected error occurred during account creation.');
+    } catch {
+      setError('Unable to send the verification email right now. Please try again in a moment.');
     } finally {
       setBusy(false);
     }
@@ -233,10 +134,10 @@ export default function SignUpPage() {
           <div className="flex items-center justify-between">
             <p className="eyebrow flex items-center gap-1.5 text-sm">
               <Sparkles className="h-4 w-4 text-blue-600" />
-              Create your secure account
+              Secure Registration
             </p>
             <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700 border border-blue-200">
-              Instant Setup
+              Verified Access
             </span>
           </div>
 
@@ -244,7 +145,7 @@ export default function SignUpPage() {
             Tell us how you support care
           </h1>
           <p className="mt-2 text-base leading-7 text-slate-600">
-            Fill in your details to create an account and access your care workspace immediately.
+            Create your account and verify your email to access your care workspace.
           </p>
 
           {error && (
@@ -253,65 +154,21 @@ export default function SignUpPage() {
                 <AlertCircle className="h-6 w-6 shrink-0 text-rose-600" />
                 <div className="flex-1">
                   <span className="font-extrabold text-rose-900 block">{error}</span>
-
-                  {rateLimitNotice && (
-                    <div className="mt-4 rounded-xl bg-amber-50 border border-amber-300 p-4 text-amber-950 font-normal">
-                      <p className="font-bold flex items-center gap-1.5 text-amber-950 text-sm">
-                        <HelpCircle className="h-4.5 w-4.5 text-amber-700" />
-                        Quick Solutions for Rate Limit Error:
-                      </p>
-                      <ul className="mt-2 space-y-1.5 text-xs text-amber-900 leading-5">
-                        <li className="flex items-start gap-1.5">
-                          <span>1.</span>
-                          <span><strong>Log In Directly:</strong> If your account was registered, click the button below to sign in instantly.</span>
-                        </li>
-                        <li className="flex items-start gap-1.5">
-                          <span>2.</span>
-                          <span><strong>Turn OFF "Confirm email" in Supabase:</strong> Open <em>Supabase Dashboard → Authentication → Email → Turn OFF "Confirm email"</em>.</span>
-                        </li>
-                      </ul>
-
-                      <div className="mt-4 flex flex-wrap gap-3">
-                        <button
-                          type="button"
-                          onClick={handleDirectLogin}
-                          className="inline-flex items-center gap-2 rounded-xl bg-amber-700 px-4 py-2 text-xs font-extrabold text-white shadow-sm hover:bg-amber-800 transition"
-                        >
-                          <LogIn className="h-4 w-4" />
-                          <span>Try Logging In Directly Now</span>
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {disabledNotice && (
-                    <div className="mt-3 rounded-xl bg-amber-50 border border-amber-200 p-4 text-amber-900 font-normal">
-                      <p className="font-bold flex items-center gap-1.5 text-amber-950 text-sm">
-                        <HelpCircle className="h-4 w-4 text-amber-700" />
-                        How to enable Email Signups in Supabase:
-                      </p>
-                      <ol className="mt-2 list-decimal list-inside space-y-1 text-xs leading-5 text-amber-900">
-                        <li>Open your <strong>Supabase Dashboard</strong> (https://supabase.com/dashboard).</li>
-                        <li>Navigate to <strong>Authentication</strong> → <strong>Providers</strong> → <strong>Email</strong>.</li>
-                        <li>Toggle <strong>ON</strong> <strong>"Enable Email provider"</strong> & <strong>"Allow new users to sign up"</strong>.</li>
-                        <li>Toggle <strong>OFF</strong> <strong>"Confirm email"</strong>.</li>
-                        <li>Click <strong>Save</strong> and try signing up again.</li>
-                      </ol>
-                    </div>
-                  )}
-
-                  {!rateLimitNotice && !disabledNotice && (
-                    <p className="mt-2 font-normal text-rose-700">
-                      Tip: If your account was already created, try{' '}
-                      <button
-                        type="button"
-                        onClick={handleDirectLogin}
-                        className="font-bold underline text-rose-900"
-                      >
-                        logging in directly
-                      </button>.
-                    </p>
-                  )}
+                  <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
+                    <Link
+                      href={`/verify-email?email=${encodeURIComponent(form.email.trim())}`}
+                      className="font-bold text-blue-700 hover:underline"
+                    >
+                      Resend Verification Email
+                    </Link>
+                    <span>•</span>
+                    <Link
+                      href={`/login?email=${encodeURIComponent(form.email.trim())}`}
+                      className="font-bold text-blue-700 hover:underline"
+                    >
+                      Go to Login
+                    </Link>
+                  </div>
                 </div>
               </div>
             </div>
@@ -347,7 +204,7 @@ export default function SignUpPage() {
             </div>
           </fieldset>
 
-          {/* Form Fields with fixed spacing and non-overlapping text */}
+          {/* Form Fields */}
           <div className="mt-7 grid gap-5 sm:grid-cols-2">
             <Field
               label="Full name"
@@ -410,7 +267,7 @@ export default function SignUpPage() {
               <span>Creating your account…</span>
             ) : (
               <>
-                <span>Create account & Sign in</span>
+                <span>Create account & Send Verification</span>
                 <ArrowRight className="h-5 w-5" />
               </>
             )}
@@ -418,13 +275,9 @@ export default function SignUpPage() {
 
           <p className="mt-6 text-center text-sm font-semibold text-slate-600">
             Already have an account?{' '}
-            <button
-              type="button"
-              onClick={handleDirectLogin}
-              className="font-extrabold text-blue-700 hover:underline"
-            >
+            <Link className="font-extrabold text-blue-700 hover:underline" href="/login">
               Log in directly
-            </button>
+            </Link>
           </p>
         </form>
       </div>

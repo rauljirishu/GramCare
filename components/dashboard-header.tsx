@@ -61,7 +61,7 @@ export function DashboardHeader() {
 
   async function handleSignOut() {
     await supabase.auth.signOut();
-    router.replace('/');
+    router.replace('/login');
   }
 
   const toggleTheme = () => {

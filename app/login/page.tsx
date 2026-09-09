@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, Suspense, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { 
   Lock, 
@@ -12,45 +13,78 @@ import {
   ArrowRight, 
   CheckCircle2, 
   AlertCircle,
-  LogIn
+  LogIn,
+  ShieldAlert
 } from 'lucide-react';
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [show, setShow] = useState(false);
   const [error, setError] = useState('');
+  const [unverifiedEmail, setUnverifiedEmail] = useState('');
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('created') === '1') {
-      setNotice('Your account was created successfully! Please log in with your email and password below.');
+    if (searchParams.get('created') === '1') {
+      setNotice('Your account was created! Please check your email for a verification link before signing in.');
     }
-    const emailParam = params.get('email');
+    if (searchParams.get('verified') === 'true') {
+      setNotice('Your email has been successfully verified! You can now log in to your account.');
+    }
+    if (searchParams.get('error') === 'email_not_confirmed') {
+      setError('Please verify your email before signing in.');
+    }
+    const emailParam = searchParams.get('email');
     if (emailParam) {
       setEmail(emailParam);
     }
-  }, []);
+  }, [searchParams]);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
     setBusy(true);
     setError('');
+    setUnverifiedEmail('');
     
+    const cleanEmail = email.trim().toLowerCase();
+
     try {
       const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
+        email: cleanEmail,
         password
       });
 
+      // Handle Authentication Error (Requirement 4)
       if (authError || !data.user) {
-        setError(authError?.message || 'Account not found. Please check your credentials or create a new account.');
+        const errorMsg = authError?.message || '';
+        const isUnconfirmed = 
+          errorMsg.toLowerCase().includes('email not confirmed') || 
+          authError?.code === 'email_not_confirmed';
+
+        if (isUnconfirmed) {
+          setUnverifiedEmail(cleanEmail);
+          setError('Please verify your email before signing in.');
+        } else {
+          setError(authError?.message || 'Invalid login credentials. Please check your email and password.');
+        }
         return;
       }
 
+      // Explicitly check user email confirmation status (UNVERIFIED USERS MUST NEVER GET DASHBOARD ACCESS)
+      const isConfirmed = !!(data.user.email_confirmed_at || data.user.confirmed_at);
+      if (!isConfirmed) {
+        await supabase.auth.signOut();
+        setUnverifiedEmail(cleanEmail);
+        setError('Please verify your email before signing in.');
+        return;
+      }
+
+      // User is authenticated AND email verified
       const { data: profile } = await supabase
         .from('users')
         .select('role')
@@ -112,15 +146,30 @@ export default function LoginPage() {
 
           {notice && (
             <div role="status" className="mt-5 flex items-start gap-3 rounded-2xl bg-emerald-50 border border-emerald-200 p-4 text-sm font-bold text-emerald-800">
-              <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" />
+              <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600 mt-0.5" />
               <span>{notice}</span>
             </div>
           )}
 
           {error && (
-            <div role="alert" className="mt-5 flex items-start gap-3 rounded-2xl bg-rose-50 border border-rose-200 p-4 text-sm font-bold text-rose-800">
-              <AlertCircle className="h-5 w-5 shrink-0 text-rose-600" />
-              <span>{error}</span>
+            <div role="alert" className="mt-5 rounded-2xl bg-rose-50 border border-rose-200 p-4 text-sm font-bold text-rose-800">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 shrink-0 text-rose-600 mt-0.5" />
+                <div className="flex-1">
+                  <span>{error}</span>
+                  {unverifiedEmail && (
+                    <div className="mt-3 flex flex-col gap-2">
+                      <Link
+                        href={`/verify-email?email=${encodeURIComponent(unverifiedEmail)}`}
+                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-rose-700 px-4 py-2 text-xs font-black text-white hover:bg-rose-800 transition"
+                      >
+                        <ShieldAlert className="h-4 w-4" />
+                        <span>Resend Verification Email</span>
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           )}
 
@@ -203,5 +252,17 @@ export default function LoginPage() {
         </form>
       </section>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="grid min-h-screen place-items-center bg-slate-50 p-4">
+        <div className="text-sm font-bold text-slate-600">Loading login...</div>
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   );
 }

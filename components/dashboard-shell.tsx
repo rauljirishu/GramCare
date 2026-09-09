@@ -45,7 +45,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
   async function signOut() {
     await supabase.auth.signOut();
-    router.replace('/');
+    router.replace('/login');
   }
 
   const nav = [

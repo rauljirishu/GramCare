@@ -80,7 +80,7 @@ export default function WorkspacePage() {
 
   async function signOut() {
     await supabase.auth.signOut();
-    router.replace('/');
+    router.replace('/login');
   }
 
   const filteredPatients = patients.filter(p => 

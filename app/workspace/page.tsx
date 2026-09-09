@@ -165,6 +165,78 @@ export default function WorkspacePage() {
           </div>
         </div>
 
+        {/* TODAY'S FIELD WORKER TASKS & PRIORITY CHECKLIST */}
+        <div className="mt-8 card p-6 border-slate-200">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+            <div>
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-0.5 text-[11px] font-black text-emerald-800">
+                <Clock className="h-3.5 w-3.5 text-emerald-600" />
+                <span>ASHA Field Queue • Today's Schedule</span>
+              </div>
+              <h2 className="mt-1 text-xl font-black text-slate-900 flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                Today's Care Tasks ({patients.length ? '3 Active' : '0 Tasks'})
+              </h2>
+            </div>
+            <span className="text-xs font-bold text-slate-500">
+              Date: {new Date().toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+            </span>
+          </div>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 text-xs hover:border-emerald-300 transition">
+              <div className="flex items-center justify-between">
+                <span className="font-extrabold text-slate-900">1. Home Visit & Vitals</span>
+                <span className="rounded-full bg-rose-100 text-rose-800 px-2 py-0.5 text-[10px] font-black uppercase">High Priority</span>
+              </div>
+              <p className="mt-2 text-slate-700 font-bold">Sunita Devi (Age 28)</p>
+              <p className="text-slate-500 text-[11px]">Rampur Ward 4 • ANC BP monitoring & Haemoglobin check.</p>
+              <button
+                onClick={() => {
+                  if (patients.length) setSelectedPatientForVitals(patients[0].id);
+                  setShowVitalsModal(true);
+                }}
+                className="mt-3 w-full rounded-xl bg-blue-50 py-2 text-center text-xs font-extrabold text-blue-700 hover:bg-blue-100 transition"
+              >
+                Collect Vitals Now
+              </button>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 text-xs hover:border-emerald-300 transition">
+              <div className="flex items-center justify-between">
+                <span className="font-extrabold text-slate-900">2. Post-Referral Check</span>
+                <span className="rounded-full bg-amber-100 text-amber-800 px-2 py-0.5 text-[10px] font-black uppercase">Scheduled</span>
+              </div>
+              <p className="mt-2 text-slate-700 font-bold">Ramesh Patel (Age 52)</p>
+              <p className="text-slate-500 text-[11px]">Sitapur Village • Verify hospital treatment completion & meds.</p>
+              <button
+                onClick={() => {
+                  if (patients.length > 1) setSelectedPatientForVitals(patients[1].id);
+                  setShowVitalsModal(true);
+                }}
+                className="mt-3 w-full rounded-xl bg-emerald-50 py-2 text-center text-xs font-extrabold text-emerald-700 hover:bg-emerald-100 transition"
+              >
+                Mark Follow-up Done
+              </button>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 text-xs hover:border-emerald-300 transition">
+              <div className="flex items-center justify-between">
+                <span className="font-extrabold text-slate-900">3. Child Immunization</span>
+                <span className="rounded-full bg-blue-100 text-blue-800 px-2 py-0.5 text-[10px] font-black uppercase">Routine</span>
+              </div>
+              <p className="mt-2 text-slate-700 font-bold">Aarav Sharma (1.5 yrs)</p>
+              <p className="text-slate-500 text-[11px]">Sub-Center PHC • Pentavalent & DPT Booster vaccine record.</p>
+              <button
+                onClick={() => setShowRegisterModal(true)}
+                className="mt-3 w-full rounded-xl bg-slate-100 py-2 text-center text-xs font-extrabold text-slate-700 hover:bg-slate-200 transition"
+              >
+                Register New Child
+              </button>
+            </div>
+          </div>
+        </div>
+
         {/* Local Patient Directory Table */}
         <div className="mt-8 card p-6 border-slate-200">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">

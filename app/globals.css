@@ -8,8 +8,8 @@
 }
 
 html[data-font-size="small"] {
-  --app-font-scale: 0.95;
-  --app-base-font-size: 15px;
+  --app-font-scale: 0.875;
+  --app-base-font-size: 14px;
 }
 
 html[data-font-size="default"] {
@@ -18,13 +18,13 @@ html[data-font-size="default"] {
 }
 
 html[data-font-size="large"] {
-  --app-font-scale: 1.10;
-  --app-base-font-size: 17.6px;
+  --app-font-scale: 1.125;
+  --app-base-font-size: 18px;
 }
 
 html[data-font-size="xlarge"] {
-  --app-font-scale: 1.20;
-  --app-base-font-size: 19.2px;
+  --app-font-scale: 1.25;
+  --app-base-font-size: 20px;
 }
 
 * {
@@ -34,7 +34,7 @@ html[data-font-size="xlarge"] {
 html {
   background: #f8fafc;
   scroll-behavior: smooth;
-  font-size: var(--app-base-font-size);
+  font-size: var(--app-base-font-size) !important;
 }
 
 body {

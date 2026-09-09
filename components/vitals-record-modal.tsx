@@ -7,14 +7,15 @@ import { Activity, X, Sparkles } from 'lucide-react';
 import type { Patient } from '@/lib/types';
 
 interface ModalProps {
-  patients: Patient[];
+  patients?: Patient[];
+  patientId?: string;
   selectedPatientId?: string;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export function VitalsRecordModal({ patients, selectedPatientId, onClose, onSuccess }: ModalProps) {
-  const [patientId, setPatientId] = useState(selectedPatientId || (patients[0]?.id ?? ''));
+export function VitalsRecordModal({ patients = [], patientId: propsPatientId, selectedPatientId, onClose, onSuccess }: ModalProps) {
+  const [patientId, setPatientId] = useState(selectedPatientId || propsPatientId || (patients[0]?.id ?? ''));
   const [systolicBp, setSystolicBp] = useState<number | ''>('');
   const [diastolicBp, setDiastolicBp] = useState<number | ''>('');
   const [bloodSugar, setBloodSugar] = useState<number | ''>('');

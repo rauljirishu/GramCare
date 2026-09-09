@@ -1,6 +1,7 @@
-export type RiskLevel = 'low' | 'medium' | 'high';
-export type ReferralStatus = 'pending' | 'accepted' | 'completed' | 'cancelled';
-export type FollowUpStatus = 'scheduled' | 'completed' | 'missed';
+export type RiskLevel = 'low' | 'medium' | 'high' | 'critical';
+export type ReferralStatus = 'pending' | 'accepted' | 'in_transit' | 'arrived' | 'completed' | 'cancelled';
+export type FollowUpStatus = 'upcoming' | 'scheduled' | 'completed' | 'missed';
+export type ReferralPriority = 'routine' | 'priority' | 'urgent';
 export type SyncStatus = 'pending' | 'synced' | 'failed';
 
 export interface SyncMetadata {
@@ -21,6 +22,11 @@ export interface Patient extends SyncMetadata {
   address: string | null;
   phone: string | null;
   guardian_name: string | null;
+  emergency_contact?: string | null;
+  blood_group?: string | null;
+  existing_conditions?: string[] | null;
+  allergies?: string[] | null;
+  current_medications?: string[] | null;
   registered_by?: string;
   created_at: string;
 }
@@ -50,6 +56,8 @@ export interface RiskAssessment extends SyncMetadata {
   model_version: string;
   warning_signals?: string[];
   recommended_action?: string;
+  contributing_factors?: string[];
+  priority?: string;
   assessed_at: string;
 }
 
@@ -59,7 +67,11 @@ export interface Referral extends SyncMetadata {
   risk_assessment_id?: string | null;
   referred_by?: string;
   status: ReferralStatus;
+  priority?: ReferralPriority;
   reason: string;
+  symptoms?: string | null;
+  clinical_notes?: string | null;
+  expected_visit_date?: string | null;
   created_at: string;
   referred_to_text: string | null;
   referred_to_facility_id: string | null;
@@ -88,6 +100,16 @@ export interface Notification {
   created_at: string;
 }
 
+export interface AuditLog {
+  id: string;
+  user_id?: string | null;
+  action: string;
+  entity_type: string;
+  entity_id?: string | null;
+  details?: Record<string, any> | null;
+  created_at: string;
+}
+
 export interface PatientRow extends Patient {
   latestRisk: RiskAssessment | null;
   recordsCount?: number;
@@ -96,9 +118,12 @@ export interface PatientRow extends Patient {
 
 export interface DashboardStats {
   totalPatients: number;
+  newPatientsThisWeek: number;
   highRiskPatients: number;
+  criticalPatients: number;
   pendingReferrals: number;
-  followUpsDue: number;
+  activeFollowUps: number;
+  missedFollowUps: number;
 }
 
 export interface SyncQueueItem {

@@ -9,16 +9,22 @@ import {
   Users, 
   AlertTriangle, 
   CalendarCheck, 
+  ArrowUpRight,
+  UserPlus,
+  BarChart3,
   LogOut,
   Stethoscope,
   ShieldCheck
 } from 'lucide-react';
 
 const nav = [
-  { href: '/dashboard', label: 'Overview', icon: <LayoutDashboard className="h-4 w-4" /> },
-  { href: '/patients', label: 'Patients', icon: <Users className="h-4 w-4" /> },
-  { href: '/high-risk', label: 'High Risk', icon: <AlertTriangle className="h-4 w-4" /> },
-  { href: '/follow-ups', label: 'Follow-ups', icon: <CalendarCheck className="h-4 w-4" /> },
+  { href: '/dashboard', label: 'Doctor Dashboard', icon: <LayoutDashboard className="h-4 w-4" /> },
+  { href: '/patients', label: 'Patient Records', icon: <Users className="h-4 w-4" /> },
+  { href: '/high-risk', label: 'High-Risk Triage', icon: <AlertTriangle className="h-4 w-4 text-rose-400" /> },
+  { href: '/referrals', label: 'Digital Referrals', icon: <ArrowUpRight className="h-4 w-4 text-violet-400" /> },
+  { href: '/follow-ups', label: 'Follow-up Tasks', icon: <CalendarCheck className="h-4 w-4 text-emerald-400" /> },
+  { href: '/workspace', label: 'ASHA Mobile Intake', icon: <UserPlus className="h-4 w-4 text-blue-400" /> },
+  { href: '/analytics', label: 'Health Analytics', icon: <BarChart3 className="h-4 w-4 text-indigo-400" /> },
 ];
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
@@ -43,7 +49,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     router.replace('/');
   }
 
-  const portalTitle = userRole === 'admin' ? 'Health Admin Portal' : 'Doctor & Clinical Portal';
+  const portalTitle = userRole === 'admin' ? 'Health Admin Control Center' : 'Doctor & Clinical Triage Portal';
   const PortalIcon = userRole === 'admin' ? ShieldCheck : Stethoscope;
 
   return (
@@ -59,14 +65,14 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             <span>{portalTitle}</span>
           </div>
 
-          <nav className="mt-8 flex gap-2 overflow-x-auto md:block md:space-y-2">
+          <nav className="mt-7 flex gap-2 overflow-x-auto md:block md:space-y-1.5">
             {nav.map((item) => {
               const active = path === item.href;
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex items-center gap-3 whitespace-nowrap rounded-xl px-4 py-3 text-sm font-extrabold transition-all duration-200 ${
+                  className={`flex items-center gap-3 whitespace-nowrap rounded-xl px-3.5 py-2.5 text-xs font-extrabold transition-all duration-200 ${
                     active
                       ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30 scale-[1.02]'
                       : 'text-slate-300 hover:bg-white/10 hover:text-white'
@@ -83,7 +89,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         <div className="mt-8 pt-4 border-t border-slate-800">
           <button
             onClick={signOut}
-            className="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-extrabold text-slate-400 hover:bg-rose-500/20 hover:text-rose-300 transition"
+            className="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-xs font-extrabold text-slate-400 hover:bg-rose-500/20 hover:text-rose-300 transition"
           >
             <LogOut className="h-4 w-4" />
             <span>Sign out</span>

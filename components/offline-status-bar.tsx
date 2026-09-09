@@ -31,19 +31,19 @@ export function OfflineStatusBar() {
             <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 font-extrabold text-emerald-700 border border-emerald-200">
               <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
               <Wifi className="h-3.5 w-3.5" />
-              <span>Online Mode</span>
+              <span>Online — data synchronized</span>
             </span>
           ) : (
             <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 font-extrabold text-amber-800 border border-amber-200">
               <WifiOff className="h-3.5 w-3.5 text-amber-600" />
-              <span>Offline Mode (Local Outbox Active)</span>
+              <span>Offline — changes will sync automatically</span>
             </span>
           )}
 
           {pendingCount > 0 && (
             <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 font-bold text-blue-700 border border-blue-200">
               <CloudUpload className="h-3.5 w-3.5" />
-              <span>{pendingCount} Pending Sync</span>
+              <span>{pendingCount} item{pendingCount > 1 ? 's' : ''} queued in outbox</span>
             </span>
           )}
         </div>

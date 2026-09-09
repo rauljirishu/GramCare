@@ -45,37 +45,21 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/api') ||
     pathname.includes('.');
 
-  // Protected routes check
+  // Protected routes check: user must be authenticated
   if (!isPublicRoute) {
-    // 1. Unauthenticated user -> Redirect to /login
     if (!user) {
       const url = request.nextUrl.clone();
       url.pathname = '/login';
       return NextResponse.redirect(url);
     }
-
-    // 2. Authenticated but unverified email -> Redirect to /verify-email
-    const isEmailConfirmed = !!(user.email_confirmed_at || user.confirmed_at);
-    if (!isEmailConfirmed) {
-      const url = request.nextUrl.clone();
-      url.pathname = '/verify-email';
-      if (user.email) {
-        url.searchParams.set('email', user.email);
-      }
-      url.searchParams.set('error', 'email_not_confirmed');
-      return NextResponse.redirect(url);
-    }
   }
 
-  // 3. Verified user trying to visit /login or /signup -> Redirect to appropriate portal
+  // Authenticated user trying to visit /login or /signup -> Redirect to appropriate workspace
   if (user && (pathname === '/login' || pathname === '/signup')) {
-    const isEmailConfirmed = !!(user.email_confirmed_at || user.confirmed_at);
-    if (isEmailConfirmed) {
-      const role = user.user_metadata?.requested_role || 'asha';
-      const url = request.nextUrl.clone();
-      url.pathname = role === 'doctor' || role === 'admin' ? '/dashboard' : '/workspace';
-      return NextResponse.redirect(url);
-    }
+    const role = user.user_metadata?.requested_role || 'asha';
+    const url = request.nextUrl.clone();
+    url.pathname = role === 'doctor' || role === 'admin' ? '/dashboard' : '/workspace';
+    return NextResponse.redirect(url);
   }
 
   return supabaseResponse;

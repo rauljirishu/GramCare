@@ -117,7 +117,6 @@ export default function SignUpPage() {
       return false;
     }
 
-    // Role-specific validation
     if (role === 'doctor' && !licenseNumber.trim()) {
       setError('Medical license/registration number is required for doctor accounts.');
       return false;
@@ -157,12 +156,11 @@ export default function SignUpPage() {
     setBusy(true);
 
     try {
-      // 1. Register user via Supabase Auth (Confirm email ON, no auto-login)
+      // 1. Supabase Auth Registration
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: cleanEmail,
         password: password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
           data: {
             name: name.trim(),
             phone: cleanPhone,
@@ -190,26 +188,37 @@ export default function SignUpPage() {
         }
       });
 
-      if (signUpError) {
-        const msg = signUpError.message.toLowerCase();
-        if (msg.includes('rate limit') || signUpError.status === 429) {
-          setError('Unable to send the verification email right now. Please try again in a moment.');
-        } else if (msg.includes('already registered') || msg.includes('already exists')) {
-          setError('An account with this email address already exists. Please log in or verify your email.');
-        } else {
-          setError(signUpError.message);
-        }
-        return;
+      // 2. Direct Sign In immediately following signup
+      const { data: signInData } = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password: password
+      });
+
+      const user = signInData?.user || signUpData?.user;
+
+      if (user) {
+        await supabase.from('users').upsert({
+          id: user.id,
+          name: name.trim(),
+          phone: cleanPhone,
+          email: cleanEmail,
+          role: role
+        }, { onConflict: 'id' });
       }
 
-      // 2. Redirect to /verify-email without creating sessions or auto-login
-      if (signUpData?.user) {
-        router.push(`/verify-email?email=${encodeURIComponent(cleanEmail)}`);
+      if (signInData?.session || signUpData?.user) {
+        if (role === 'doctor' || role === 'admin') {
+          router.replace('/dashboard');
+        } else {
+          router.replace('/workspace');
+        }
+      } else if (signUpError) {
+        setError(signUpError.message);
       } else {
-        router.push('/login?created=1');
+        router.push(`/login?created=1&email=${encodeURIComponent(cleanEmail)}`);
       }
-    } catch {
-      setError('Unable to complete account registration. Please try again in a moment.');
+    } catch (err: any) {
+      setError(err?.message || 'Unable to complete account registration. Please try again in a moment.');
     } finally {
       setBusy(false);
     }
@@ -218,7 +227,6 @@ export default function SignUpPage() {
   return (
     <main className="min-h-screen bg-slate-50 dark:bg-slate-950 px-4 py-8 sm:py-12 transition-colors">
       <div className="mx-auto w-full max-w-3xl">
-        {/* Header Link */}
         <div className="flex items-center justify-between">
           <Link href="/" className="inline-flex items-center gap-1.5 text-sm font-bold text-blue-700 dark:text-blue-400 hover:underline">
             ← GramCare Home
@@ -226,21 +234,19 @@ export default function SignUpPage() {
 
           <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-100 dark:bg-blue-950/80 px-3.5 py-1 text-xs font-black text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
             <Sparkles className="h-3.5 w-3.5 text-blue-600" />
-            Verified Registration System
+            Instant Onboarding
           </span>
         </div>
 
-        {/* Signup Form Card */}
         <div className="card mt-4 p-6 sm:p-10 shadow-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
           
-          {/* Progress Step Indicator */}
           <div className="mb-8">
             <div className="flex items-center justify-between text-xs font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
               <span>Step {step} of 3</span>
               <span>
                 {step === 1 && 'Role Selection'}
                 {step === 2 && 'Account & Role Details'}
-                {step === 3 && 'Review & Submit'}
+                {step === 3 && 'Review & Access Workspace'}
               </span>
             </div>
             <div className="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
@@ -255,7 +261,7 @@ export default function SignUpPage() {
             Create your care workspace account
           </h1>
           <p className="mt-2 text-base leading-7 text-slate-600 dark:text-slate-400 font-medium">
-            Create your account and verify your email to access your care workspace.
+            Fill in your details to create an account and access your care workspace immediately.
           </p>
 
           {error && (
@@ -266,17 +272,10 @@ export default function SignUpPage() {
                   <span className="font-extrabold text-rose-900 dark:text-rose-100 block text-base">{error}</span>
                   <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
                     <Link
-                      href={`/verify-email?email=${encodeURIComponent(email.trim())}`}
-                      className="font-bold text-blue-700 dark:text-blue-400 hover:underline"
-                    >
-                      Resend Verification Email
-                    </Link>
-                    <span>•</span>
-                    <Link
                       href={`/login?email=${encodeURIComponent(email.trim())}`}
                       className="font-bold text-blue-700 dark:text-blue-400 hover:underline"
                     >
-                      Go to Login
+                      Log In Directly
                     </Link>
                   </div>
                 </div>
@@ -295,7 +294,6 @@ export default function SignUpPage() {
               </p>
 
               <div className="grid gap-4 sm:grid-cols-3">
-                {/* ASHA / ANM */}
                 <label
                   onClick={() => setRole('asha')}
                   className={`cursor-pointer rounded-2xl border-2 p-5 transition-all ${
@@ -316,7 +314,6 @@ export default function SignUpPage() {
                   </p>
                 </label>
 
-                {/* Doctor */}
                 <label
                   onClick={() => setRole('doctor')}
                   className={`cursor-pointer rounded-2xl border-2 p-5 transition-all ${
@@ -337,7 +334,6 @@ export default function SignUpPage() {
                   </p>
                 </label>
 
-                {/* Admin */}
                 <label
                   onClick={() => setRole('admin')}
                   className={`cursor-pointer rounded-2xl border-2 p-5 transition-all ${
@@ -372,11 +368,9 @@ export default function SignUpPage() {
             </div>
           )}
 
-          {/* STEP 2: DYNAMIC ROLE & ACCOUNT DETAILS */}
+          {/* STEP 2: DYNAMIC ROLE DETAILS */}
           {step === 2 && (
             <div className="mt-8 space-y-8">
-              
-              {/* SECTION A: COMMON ACCOUNT CREDENTIALS */}
               <div>
                 <h2 className="text-xl font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
                   <User className="h-5 w-5 text-blue-600" />
@@ -437,9 +431,7 @@ export default function SignUpPage() {
                 </div>
               </div>
 
-              {/* SECTION B: DYNAMIC ROLE SPECIFIC FIELDS */}
-
-              {/* ROLE 1: ASHA / ANM */}
+              {/* ASHA */}
               {role === 'asha' && (
                 <div className="rounded-2xl bg-blue-50/50 dark:bg-blue-950/30 p-6 border border-blue-100 dark:border-blue-900/50 space-y-5">
                   <h2 className="text-xl font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-2 border-b border-blue-200 dark:border-blue-800 pb-3">
@@ -513,7 +505,7 @@ export default function SignUpPage() {
                 </div>
               )}
 
-              {/* ROLE 2: DOCTOR / MEDICAL OFFICER */}
+              {/* DOCTOR */}
               {role === 'doctor' && (
                 <div className="rounded-2xl bg-emerald-50/50 dark:bg-emerald-950/30 p-6 border border-emerald-100 dark:border-emerald-900/50 space-y-5">
                   <h2 className="text-xl font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-2 border-b border-emerald-200 dark:border-emerald-800 pb-3">
@@ -598,20 +590,10 @@ export default function SignUpPage() {
                       type="text"
                     />
                   </div>
-
-                  <div className="rounded-xl bg-amber-50 dark:bg-amber-950/40 p-4 border border-amber-200 dark:border-amber-900 text-xs text-amber-950 dark:text-amber-200 font-semibold leading-5">
-                    <p className="font-bold flex items-center gap-1.5 text-amber-950 dark:text-amber-100">
-                      <ShieldAlert className="h-4 w-4 text-amber-600 shrink-0" />
-                      Doctor Account Verification Requirement:
-                    </p>
-                    <p className="mt-1">
-                      To prevent unauthorized clinical access, doctor accounts are registered under <strong>PENDING_VERIFICATION</strong> status. Full clinical referral controls are activated upon credentials review.
-                    </p>
-                  </div>
                 </div>
               )}
 
-              {/* ROLE 3: HEALTH ADMIN */}
+              {/* ADMIN */}
               {role === 'admin' && (
                 <div className="rounded-2xl bg-violet-50/50 dark:bg-violet-950/30 p-6 border border-violet-100 dark:border-violet-900/50 space-y-5">
                   <h2 className="text-xl font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-2 border-b border-violet-200 dark:border-violet-800 pb-3">
@@ -652,20 +634,9 @@ export default function SignUpPage() {
                       toggle={() => setShowPassword(!showPassword)}
                     />
                   </div>
-
-                  <div className="rounded-xl bg-violet-100 dark:bg-violet-950/60 p-4 border border-violet-200 dark:border-violet-800 text-xs text-violet-950 dark:text-violet-200 font-semibold leading-5">
-                    <p className="font-bold flex items-center gap-1.5 text-violet-950 dark:text-violet-100">
-                      <ShieldAlert className="h-4 w-4 text-violet-600 shrink-0" />
-                      Controlled Administrative Privileges:
-                    </p>
-                    <p className="mt-1">
-                      Health Admin accounts grant system-wide control. Registration requires a valid Admin Security Authorization Key provided by your health department administrator.
-                    </p>
-                  </div>
                 </div>
               )}
 
-              {/* Navigation Buttons */}
               <div className="flex items-center justify-between gap-4 pt-4">
                 <button
                   type="button"
@@ -769,10 +740,10 @@ export default function SignUpPage() {
                   className="primary-btn py-3.5 px-8 text-base font-bold shadow-lg shadow-blue-500/20"
                 >
                   {busy ? (
-                    <span>Creating account…</span>
+                    <span>Creating account & signing in…</span>
                   ) : (
                     <>
-                      <span>Create Account & Send Verification</span>
+                      <span>Create Account & Sign In</span>
                       <ArrowRight className="h-5 w-5" />
                     </>
                   )}

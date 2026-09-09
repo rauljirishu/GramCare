@@ -13,8 +13,7 @@ import {
   ArrowRight, 
   CheckCircle2, 
   AlertCircle,
-  LogIn,
-  ShieldAlert
+  LogIn
 } from 'lucide-react';
 
 function LoginContent() {
@@ -25,19 +24,12 @@ function LoginContent() {
   const [password, setPassword] = useState('');
   const [show, setShow] = useState(false);
   const [error, setError] = useState('');
-  const [unverifiedEmail, setUnverifiedEmail] = useState('');
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (searchParams.get('created') === '1') {
-      setNotice('Your account was created! Please check your email for a verification link before signing in.');
-    }
-    if (searchParams.get('verified') === 'true') {
-      setNotice('Your email has been successfully verified! You can now log in to your account.');
-    }
-    if (searchParams.get('error') === 'email_not_confirmed') {
-      setError('Please verify your email before signing in.');
+      setNotice('Your account was created successfully! Please log in with your email and password below.');
     }
     const emailParam = searchParams.get('email');
     if (emailParam) {
@@ -49,7 +41,6 @@ function LoginContent() {
     event.preventDefault();
     setBusy(true);
     setError('');
-    setUnverifiedEmail('');
     
     const cleanEmail = email.trim().toLowerCase();
 
@@ -59,32 +50,11 @@ function LoginContent() {
         password
       });
 
-      // Handle Authentication Error (Requirement 4)
       if (authError || !data.user) {
-        const errorMsg = authError?.message || '';
-        const isUnconfirmed = 
-          errorMsg.toLowerCase().includes('email not confirmed') || 
-          authError?.code === 'email_not_confirmed';
-
-        if (isUnconfirmed) {
-          setUnverifiedEmail(cleanEmail);
-          setError('Please verify your email before signing in.');
-        } else {
-          setError(authError?.message || 'Invalid login credentials. Please check your email and password.');
-        }
+        setError(authError?.message || 'Invalid login credentials. Please check your email and password.');
         return;
       }
 
-      // Explicitly check user email confirmation status (UNVERIFIED USERS MUST NEVER GET DASHBOARD ACCESS)
-      const isConfirmed = !!(data.user.email_confirmed_at || data.user.confirmed_at);
-      if (!isConfirmed) {
-        await supabase.auth.signOut();
-        setUnverifiedEmail(cleanEmail);
-        setError('Please verify your email before signing in.');
-        return;
-      }
-
-      // User is authenticated AND email verified
       const { data: profile } = await supabase
         .from('users')
         .select('role')
@@ -126,54 +96,39 @@ function LoginContent() {
   }
 
   return (
-    <main className="grid min-h-screen place-items-center bg-slate-50 p-4">
+    <main className="grid min-h-screen place-items-center bg-slate-50 dark:bg-slate-950 p-4 transition-colors">
       <section className="w-full max-w-md">
-        <Link href="/" className="inline-flex items-center gap-1.5 text-base font-bold text-blue-700 hover:underline">
+        <Link href="/" className="inline-flex items-center gap-1.5 text-base font-bold text-blue-700 dark:text-blue-400 hover:underline">
           ← GramCare Home
         </Link>
 
-        <form onSubmit={submit} className="card mt-4 p-6 sm:p-9 shadow-xl border-slate-200">
+        <form onSubmit={submit} className="card mt-4 p-6 sm:p-9 shadow-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
           <div className="grid h-12 w-12 place-items-center rounded-2xl bg-blue-600 text-white shadow-md shadow-blue-500/20">
             <LogIn className="h-6 w-6" />
           </div>
 
-          <h1 className="mt-4 text-3xl font-black text-slate-900 tracking-tight sm:text-4xl">
+          <h1 className="mt-4 text-3xl font-black text-slate-900 dark:text-slate-100 tracking-tight sm:text-4xl">
             Welcome back
           </h1>
-          <p className="mt-2 text-base leading-7 text-slate-600">
+          <p className="mt-2 text-base leading-7 text-slate-600 dark:text-slate-400">
             Log in to access your secure GramCare workspace.
           </p>
 
           {notice && (
-            <div role="status" className="mt-5 flex items-start gap-3 rounded-2xl bg-emerald-50 border border-emerald-200 p-4 text-sm font-bold text-emerald-800">
-              <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600 mt-0.5" />
+            <div role="status" className="mt-5 flex items-start gap-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 p-4 text-sm font-bold text-emerald-800 dark:text-emerald-200">
+              <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400 mt-0.5" />
               <span>{notice}</span>
             </div>
           )}
 
           {error && (
-            <div role="alert" className="mt-5 rounded-2xl bg-rose-50 border border-rose-200 p-4 text-sm font-bold text-rose-800">
-              <div className="flex items-start gap-3">
-                <AlertCircle className="h-5 w-5 shrink-0 text-rose-600 mt-0.5" />
-                <div className="flex-1">
-                  <span>{error}</span>
-                  {unverifiedEmail && (
-                    <div className="mt-3 flex flex-col gap-2">
-                      <Link
-                        href={`/verify-email?email=${encodeURIComponent(unverifiedEmail)}`}
-                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-rose-700 px-4 py-2 text-xs font-black text-white hover:bg-rose-800 transition"
-                      >
-                        <ShieldAlert className="h-4 w-4" />
-                        <span>Resend Verification Email</span>
-                      </Link>
-                    </div>
-                  )}
-                </div>
-              </div>
+            <div role="alert" className="mt-5 flex items-start gap-3 rounded-2xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 p-4 text-sm font-bold text-rose-800 dark:text-rose-200">
+              <AlertCircle className="h-5 w-5 shrink-0 text-rose-600 dark:text-rose-400 mt-0.5" />
+              <span>{error}</span>
             </div>
           )}
 
-          <label className="mt-6 block text-sm font-extrabold text-slate-800">
+          <label className="mt-6 block text-base font-extrabold text-slate-800 dark:text-slate-200">
             Email
             <div className="relative mt-2">
               <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 z-10">
@@ -192,7 +147,7 @@ function LoginContent() {
             </div>
           </label>
 
-          <label className="mt-5 block text-sm font-extrabold text-slate-800">
+          <label className="mt-5 block text-base font-extrabold text-slate-800 dark:text-slate-200">
             Password
             <div className="relative mt-2">
               <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 z-10">
@@ -212,7 +167,7 @@ function LoginContent() {
               <button
                 type="button"
                 onClick={() => setShow(!show)}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-lg px-2.5 py-1 text-xs font-extrabold text-blue-700 hover:bg-blue-50 transition z-10"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-lg px-2.5 py-1 text-xs font-extrabold text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950 transition z-10"
               >
                 {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
@@ -223,7 +178,7 @@ function LoginContent() {
             <button
               type="button"
               onClick={forgot}
-              className="text-xs font-bold text-blue-700 hover:underline"
+              className="text-xs font-bold text-blue-700 dark:text-blue-400 hover:underline"
             >
               Forgot password?
             </button>
@@ -243,9 +198,9 @@ function LoginContent() {
             )}
           </button>
 
-          <p className="mt-6 text-center text-sm font-semibold text-slate-600">
+          <p className="mt-6 text-center text-sm font-semibold text-slate-600 dark:text-slate-400">
             No account yet?{' '}
-            <Link className="font-extrabold text-blue-700 hover:underline" href="/signup">
+            <Link className="font-extrabold text-blue-700 dark:text-blue-400 hover:underline" href="/signup">
               Create an account
             </Link>
           </p>

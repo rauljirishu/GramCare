@@ -1,6 +1,33 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+Devanagari:wght@400;500;600;700;800;900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  --app-font-scale: 1;
+  --app-base-font-size: 16px;
+}
+
+html[data-font-size="small"] {
+  --app-font-scale: 0.95;
+  --app-base-font-size: 15px;
+}
+
+html[data-font-size="default"] {
+  --app-font-scale: 1;
+  --app-base-font-size: 16px;
+}
+
+html[data-font-size="large"] {
+  --app-font-scale: 1.10;
+  --app-base-font-size: 17.6px;
+}
+
+html[data-font-size="xlarge"] {
+  --app-font-scale: 1.20;
+  --app-base-font-size: 19.2px;
+}
 
 * {
   box-sizing: border-box;
@@ -9,33 +36,35 @@
 html {
   background: #f8fafc;
   scroll-behavior: smooth;
+  font-size: var(--app-base-font-size);
 }
 
 body {
   margin: 0;
   color: #0f172a;
   background: #f8fafc;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  font-size: 16px;
+  font-family: 'Inter', 'Noto Sans Devanagari', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 1rem;
   line-height: 1.6;
 }
 
 button, input, textarea, select {
-  font: inherit;
+  font-family: inherit;
+  font-size: inherit;
 }
 
 button {
   cursor: pointer;
 }
 
-/* Base input styling without forcing px-4 in @apply */
+/* Base input styling */
 .input {
   @apply w-full rounded-xl border border-slate-300 bg-white py-3 text-base font-medium text-slate-900 outline-none placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition shadow-sm;
   padding-left: 1rem;
   padding-right: 1rem;
 }
 
-/* Explicit input padding classes that guarantee no icon-text overlap */
+/* Explicit input padding classes */
 .input-icon-left {
   padding-left: 3.25rem !important;
   padding-right: 1rem !important;
@@ -54,6 +83,10 @@ button {
   @apply inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 text-base font-bold text-slate-700 transition-all duration-200 hover:bg-slate-50 hover:border-slate-300 active:scale-[0.98];
 }
 
+.card, .panel {
+  @apply rounded-3xl bg-white border border-slate-200 shadow-sm transition-all duration-200;
+}
+
 .eyebrow {
   @apply text-sm font-bold uppercase tracking-[0.16em] text-blue-700;
 }
@@ -68,6 +101,138 @@ button {
 
 .footer-link {
   @apply text-slate-300 transition hover:text-white;
+}
+
+/* -------------------------------------------------------------
+   GLOBAL HEALTHCARE DARK THEME OVERRIDES
+   ------------------------------------------------------------- */
+html.dark {
+  background-color: #0b132b !important;
+  color: #f8fafc !important;
+}
+
+html.dark body {
+  background-color: #0b132b !important;
+  color: #f8fafc !important;
+}
+
+html.dark aside {
+  background-color: #070a14 !important;
+  border-color: #1e293b !important;
+}
+
+html.dark .card,
+html.dark .panel {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+html.dark .input {
+  background-color: #0f172a !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+html.dark .input::placeholder {
+  color: #64748b !important;
+}
+
+html.dark select.input {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+}
+
+html.dark .secondary-btn {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+html.dark .secondary-btn:hover {
+  background-color: #334155 !important;
+  border-color: #475569 !important;
+}
+
+html.dark table th {
+  background-color: #0f172a !important;
+  color: #94a3b8 !important;
+  border-color: #334155 !important;
+}
+
+html.dark table td {
+  border-color: #334155 !important;
+  color: #e2e8f0 !important;
+}
+
+html.dark table tr:hover {
+  background-color: #334155/50 !important;
+}
+
+html.dark .text-slate-900 {
+  color: #f8fafc !important;
+}
+
+html.dark .text-slate-800 {
+  color: #f1f5f9 !important;
+}
+
+html.dark .text-slate-700 {
+  color: #cbd5e1 !important;
+}
+
+html.dark .text-slate-600 {
+  color: #94a3b8 !important;
+}
+
+html.dark .text-slate-500 {
+  color: #64748b !important;
+}
+
+html.dark .bg-slate-50 {
+  background-color: #0f172a !important;
+}
+
+html.dark .bg-slate-100 {
+  background-color: #1e293b !important;
+}
+
+html.dark .bg-white {
+  background-color: #1e293b !important;
+}
+
+html.dark .border-slate-100,
+html.dark .border-slate-200 {
+  border-color: #334155 !important;
+}
+
+/* -------------------------------------------------------------
+   ACCESSIBILITY: HIGH CONTRAST & REDUCED MOTION
+   ------------------------------------------------------------- */
+html.high-contrast {
+  --app-base-font-size: 17px;
+}
+
+html.high-contrast .card,
+html.high-contrast .panel,
+html.high-contrast .input,
+html.high-contrast button {
+  border-width: 2px !important;
+  border-color: #000000 !important;
+}
+
+html.dark.high-contrast .card,
+html.dark.high-contrast .panel,
+html.dark.high-contrast .input,
+html.dark.high-contrast button {
+  border-color: #ffffff !important;
+}
+
+html.reduced-motion *,
+html.reduced-motion *::before,
+html.reduced-motion *::after {
+  animation: none !important;
+  transition: none !important;
 }
 
 /* 3D Flashcard Flip Animation CSS */
@@ -103,7 +268,7 @@ button {
   transform: rotateY(180deg);
 }
 
-/* Custom UI Keyframe Animations */
+/* Keyframe Animations */
 @keyframes float {
   0%, 100% { transform: translateY(0px); }
   50% { transform: translateY(-8px); }

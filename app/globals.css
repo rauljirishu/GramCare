@@ -1,2 +1,127 @@
-@tailwind base; @tailwind components; @tailwind utilities;
-* { box-sizing: border-box; } body { margin:0; color:#173432; background:#f5f8f7; font-family:Arial, Helvetica, sans-serif; } button,input,textarea { font:inherit; } .panel { @apply rounded-2xl border border-slate-100 bg-white shadow-sm; } .input { @apply w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100; }
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: #f8fafc;
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  color: #1e293b;
+  background: #f8fafc;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+button, input, textarea, select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+/* Utilities */
+.card {
+  @apply rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:shadow-md;
+}
+
+.panel {
+  @apply rounded-2xl border border-slate-100 bg-white shadow-sm transition-all duration-300;
+}
+
+.input {
+  @apply w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-slate-800 outline-none placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition;
+}
+
+.primary-btn {
+  @apply inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-blue-700 hover:shadow-md active:scale-[0.98] disabled:opacity-60;
+}
+
+.secondary-btn {
+  @apply inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 transition-all duration-200 hover:bg-slate-50 hover:border-slate-300 active:scale-[0.98];
+}
+
+.eyebrow {
+  @apply text-sm font-bold uppercase tracking-[0.16em] text-blue-700;
+}
+
+.section-title {
+  @apply mt-3 text-4xl font-extrabold tracking-tight text-slate-900 sm:text-5xl;
+}
+
+.nav-link {
+  @apply text-sm font-semibold text-slate-600 transition hover:text-blue-700;
+}
+
+.footer-link {
+  @apply text-slate-300 transition hover:text-white;
+}
+
+/* 3D Flashcard Flip Animation CSS */
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.flip-card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-style: preserve-3d;
+}
+
+.flip-card-inner.is-flipped {
+  transform: rotateY(180deg);
+}
+
+.flip-card-front,
+.flip-card-back {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  border-radius: 1.5rem;
+  top: 0;
+  left: 0;
+}
+
+.flip-card-back {
+  transform: rotateY(180deg);
+}
+
+/* Custom UI Keyframe Animations */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 3s ease-in-out infinite;
+}
+
+.shimmer-bg {
+  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 2.5s infinite;
+}

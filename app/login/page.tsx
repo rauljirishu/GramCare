@@ -123,11 +123,12 @@ export default function LoginPage() {
           <label className="mt-6 block text-sm font-extrabold text-slate-800">
             Email
             <div className="relative mt-2">
-              <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+              <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 z-10">
                 <Mail className="h-5 w-5" />
               </div>
               <input
-                className="input pl-11"
+                className="input input-icon-left"
+                style={{ paddingLeft: '3.25rem' }}
                 type="email"
                 required
                 value={email}
@@ -141,11 +142,12 @@ export default function LoginPage() {
           <label className="mt-5 block text-sm font-extrabold text-slate-800">
             Password
             <div className="relative mt-2">
-              <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+              <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 z-10">
                 <Lock className="h-5 w-5" />
               </div>
               <input
-                className="input pl-11 pr-20"
+                className="input input-icon-both"
+                style={{ paddingLeft: '3.25rem', paddingRight: '5.5rem' }}
                 type={show ? 'text' : 'password'}
                 required
                 minLength={6}
@@ -157,7 +159,7 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => setShow(!show)}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-lg px-2.5 py-1 text-xs font-extrabold text-blue-700 hover:bg-blue-50 transition"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-lg px-2.5 py-1 text-xs font-extrabold text-blue-700 hover:bg-blue-50 transition z-10"
               >
                 {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>

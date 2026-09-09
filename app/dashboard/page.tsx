@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { DashboardShell } from '@/components/dashboard-shell';
 import { Loading } from '@/components/loading';
 import { getDashboardStats, getNotifications } from '@/lib/api/doctor';
@@ -15,12 +14,7 @@ import {
   Clock, 
   Bell, 
   ShieldCheck, 
-  Stethoscope, 
-  HeartPulse, 
-  UserCheck, 
-  Hospital, 
-  Globe2,
-  Sparkles
+  Stethoscope
 } from 'lucide-react';
 
 const cards = [
@@ -204,92 +198,6 @@ export default function Dashboard() {
               )}
             </section>
           </div>
-
-          {/* IMPACT AND BENEFITS SHOWCASE SECTION (Smart India Hackathon 2026) */}
-          <section className="mt-10 card p-7 sm:p-9 border-slate-200 bg-gradient-to-b from-white via-slate-50 to-blue-50/30">
-            <div className="text-center max-w-3xl mx-auto">
-              <div className="inline-flex items-center gap-2 rounded-full bg-blue-100 px-4 py-1.5 text-xs font-black text-blue-700 shadow-sm">
-                <Sparkles className="h-4 w-4 text-blue-600" />
-                <span>Smart India Hackathon 2026</span>
-              </div>
-              <h2 className="mt-3 text-3xl font-black text-slate-900 tracking-tight sm:text-4xl">
-                IMPACT AND BENEFITS
-              </h2>
-              <p className="mt-2 text-base leading-7 text-slate-600">
-                GramCare reduces referral delays, improves record accessibility, and maintains continuity of healthcare for rural communities.
-              </p>
-            </div>
-
-            <div className="mt-9 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-              {/* Column 1: For Patients */}
-              <article className="card p-6 border-slate-200 text-center bg-white shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
-                <div className="relative mx-auto h-28 w-28 overflow-hidden rounded-full border-4 border-rose-100 shadow-md">
-                  <img src="/images/patient_care_clinic.png" alt="For Patients" className="h-full w-full object-cover" />
-                </div>
-                <h3 className="mt-5 text-lg font-black text-slate-900 flex items-center justify-center gap-1.5">
-                  <HeartPulse className="h-5 w-5 text-rose-600" />
-                  For Patients
-                </h3>
-                <ul className="mt-4 space-y-2 text-left text-xs leading-5 text-slate-600 font-semibold">
-                  <li className="flex items-start gap-2">● Faster identification of high-risk cases</li>
-                  <li className="flex items-start gap-2">● Reduced unnecessary travel to distant clinics</li>
-                  <li className="flex items-start gap-2">● Better continuity of treatment</li>
-                  <li className="flex items-start gap-2">● Improved follow-up checkup adherence</li>
-                </ul>
-              </article>
-
-              {/* Column 2: For Healthcare Workers */}
-              <article className="card p-6 border-slate-200 text-center bg-white shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
-                <div className="relative mx-auto h-28 w-28 overflow-hidden rounded-full border-4 border-blue-100 shadow-md">
-                  <img src="/images/rural_health_worker.png" alt="For Healthcare Workers" className="h-full w-full object-cover" />
-                </div>
-                <h3 className="mt-5 text-lg font-black text-slate-900 flex items-center justify-center gap-1.5">
-                  <UserCheck className="h-5 w-5 text-blue-600" />
-                  For Health Workers
-                </h3>
-                <ul className="mt-4 space-y-2 text-left text-xs leading-5 text-slate-600 font-semibold">
-                  <li className="flex items-start gap-2">● Can work fully without internet</li>
-                  <li className="flex items-start gap-2">● Digital offline patient health records</li>
-                  <li className="flex items-start gap-2">● AI-assisted offline triage prioritization</li>
-                  <li className="flex items-start gap-2">● Easier patient tracking & follow-ups</li>
-                </ul>
-              </article>
-
-              {/* Column 3: For Doctors & Hospitals */}
-              <article className="card p-6 border-slate-200 text-center bg-white shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
-                <div className="relative mx-auto h-28 w-28 overflow-hidden rounded-full border-4 border-violet-100 shadow-md">
-                  <img src="/images/doctor_triage_dashboard.png" alt="For Doctors & Hospitals" className="h-full w-full object-cover" />
-                </div>
-                <h3 className="mt-5 text-lg font-black text-slate-900 flex items-center justify-center gap-1.5">
-                  <Hospital className="h-5 w-5 text-violet-600" />
-                  Doctors & Hospitals
-                </h3>
-                <ul className="mt-4 space-y-2 text-left text-xs leading-5 text-slate-600 font-semibold">
-                  <li className="flex items-start gap-2">● Centralized patient health information</li>
-                  <li className="flex items-start gap-2">● High-risk cases visible instantly</li>
-                  <li className="flex items-start gap-2">● Better referral coordination</li>
-                  <li className="flex items-start gap-2">● Improved healthcare resource management</li>
-                </ul>
-              </article>
-
-              {/* Column 4: Social Impact */}
-              <article className="card p-6 border-slate-200 text-center bg-white shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
-                <div className="relative mx-auto h-28 w-28 overflow-hidden rounded-full border-4 border-emerald-100 shadow-md">
-                  <img src="/images/community_health_impact.png" alt="Social Impact" className="h-full w-full object-cover" />
-                </div>
-                <h3 className="mt-5 text-lg font-black text-slate-900 flex items-center justify-center gap-1.5">
-                  <Globe2 className="h-5 w-5 text-emerald-600" />
-                  Social Impact
-                </h3>
-                <ul className="mt-4 space-y-2 text-left text-xs leading-5 text-slate-600 font-semibold">
-                  <li className="flex items-start gap-2">● Improved accessibility to healthcare</li>
-                  <li className="flex items-start gap-2">● Support for underserved communities</li>
-                  <li className="flex items-start gap-2">● Reduced healthcare delays</li>
-                  <li className="flex items-start gap-2">● Stronger rural healthcare network</li>
-                </ul>
-              </article>
-            </div>
-          </section>
         </>
       )}
     </DashboardShell>

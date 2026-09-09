@@ -183,7 +183,8 @@ export default function WorkspacePage() {
                 placeholder="Search patient or village…"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="input pl-10 text-sm py-2.5"
+                className="input input-icon-left text-sm py-2.5"
+                style={{ paddingLeft: '2.75rem' }}
               />
             </div>
           </div>

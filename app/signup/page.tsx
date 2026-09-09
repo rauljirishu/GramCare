@@ -361,7 +361,7 @@ function Field({
       {label}
       <div className="relative mt-2">
         {icon && (
-          <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+          <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 z-10">
             {icon}
           </div>
         )}
@@ -372,7 +372,8 @@ function Field({
           onChange={event => change(event.target.value)}
           placeholder={placeholder}
           autoComplete={type === 'email' ? 'email' : type === 'tel' ? 'tel' : undefined}
-          className={`input ${icon ? 'pl-11' : 'px-4'}`}
+          className={`input ${icon ? 'input-icon-left' : ''}`}
+          style={icon ? { paddingLeft: '3.25rem' } : undefined}
         />
       </div>
     </label>
@@ -396,7 +397,7 @@ function PasswordField({
     <label className="block text-sm font-extrabold text-slate-800">
       {label}
       <div className="relative mt-2">
-        <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+        <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 z-10">
           <Lock className="h-5 w-5" />
         </div>
         <input
@@ -407,12 +408,13 @@ function PasswordField({
           onChange={event => change(event.target.value)}
           placeholder="At least 6 characters"
           autoComplete="new-password"
-          className="input pl-11 pr-20"
+          className="input input-icon-both"
+          style={{ paddingLeft: '3.25rem', paddingRight: '5.5rem' }}
         />
         <button
           type="button"
           onClick={toggle}
-          className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-lg px-2.5 py-1 text-xs font-extrabold text-blue-700 hover:bg-blue-50 transition"
+          className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-lg px-2.5 py-1 text-xs font-extrabold text-blue-700 hover:bg-blue-50 transition z-10"
         >
           {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
         </button>

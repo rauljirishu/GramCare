@@ -28,18 +28,22 @@ button {
   cursor: pointer;
 }
 
-/* Utilities */
-.card {
-  @apply rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:shadow-md;
-}
-
-.panel {
-  @apply rounded-2xl border border-slate-100 bg-white shadow-sm transition-all duration-300;
-}
-
-/* Prevent text overlap & increase input font readability */
+/* Base input styling without forcing px-4 in @apply */
 .input {
-  @apply w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-base font-medium text-slate-900 outline-none placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition shadow-sm;
+  @apply w-full rounded-xl border border-slate-300 bg-white py-3 text-base font-medium text-slate-900 outline-none placeholder:text-slate-400 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition shadow-sm;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+/* Explicit input padding classes that guarantee no icon-text overlap */
+.input-icon-left {
+  padding-left: 3.25rem !important;
+  padding-right: 1rem !important;
+}
+
+.input-icon-both {
+  padding-left: 3.25rem !important;
+  padding-right: 5.5rem !important;
 }
 
 .primary-btn {

@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { createPatientDirectly } from '@/lib/api/doctor';
 import { syncEngine } from '@/lib/offline/sync-engine';
-import { UserPlus, X, AlertCircle } from 'lucide-react';
+import { UserPlus, X, AlertCircle, CheckCircle2 } from 'lucide-react';
 import type { Patient } from '@/lib/types';
 
 interface ModalProps {
@@ -16,11 +16,19 @@ export function PatientRegistrationModal({ onClose, onSuccess }: ModalProps) {
   const [age, setAge] = useState<number | ''>('');
   const [gender, setGender] = useState('female');
   const [village, setVillage] = useState('');
+  const [gramPanchayat, setGramPanchayat] = useState('');
   const [address, setAddress] = useState('');
   const [phone, setPhone] = useState('');
   const [guardianName, setGuardianName] = useState('');
+  const [emergencyContact, setEmergencyContact] = useState('');
+  const [bloodGroup, setBloodGroup] = useState('O+');
+  const [allergiesText, setAllergiesText] = useState('');
+  const [conditionsText, setConditionsText] = useState('');
+  const [medicationsText, setMedicationsText] = useState('');
+
   const [busy, setBusy] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,32 +36,41 @@ export function PatientRegistrationModal({ onClose, onSuccess }: ModalProps) {
 
     setBusy(true);
     setErrorMsg('');
+    setSuccessMsg('');
+
+    const allergies = allergiesText.split(',').map(s => s.trim()).filter(Boolean);
+    const existingConditions = conditionsText.split(',').map(s => s.trim()).filter(Boolean);
+    const currentMedications = medicationsText.split(',').map(s => s.trim()).filter(Boolean);
+
     try {
       let patient: Patient;
+      const payload = {
+        name,
+        age: Number(age),
+        gender,
+        village,
+        gramPanchayat,
+        address,
+        phone,
+        guardianName,
+        emergencyContact,
+        bloodGroup,
+        allergies,
+        existingConditions,
+        currentMedications
+      };
+
       if (syncEngine.isOnline()) {
-        patient = await createPatientDirectly({
-          name,
-          age: Number(age),
-          gender,
-          village,
-          address,
-          phone,
-          guardianName
-        });
+        patient = await createPatientDirectly(payload);
       } else {
-        patient = await syncEngine.createPatientOffline({
-          name,
-          age: Number(age),
-          gender,
-          village,
-          address,
-          phone,
-          guardianName
-        });
+        patient = await syncEngine.createPatientOffline(payload);
       }
 
-      onSuccess(patient);
-      onClose();
+      setSuccessMsg(`Patient ${patient.name} registered successfully!`);
+      setTimeout(() => {
+        onSuccess(patient);
+        onClose();
+      }, 600);
     } catch (err: any) {
       console.error('Patient registration failed:', err);
       setErrorMsg(err?.message || 'Unable to save patient to database. Please check your network and permissions.');
@@ -64,7 +81,7 @@ export function PatientRegistrationModal({ onClose, onSuccess }: ModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/60 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="w-full max-w-lg rounded-3xl bg-white p-6 sm:p-8 shadow-2xl border border-slate-200 my-8">
+      <div className="w-full max-w-2xl rounded-3xl bg-white p-6 sm:p-8 shadow-2xl border border-slate-200 my-8">
         <div className="flex items-center justify-between border-b border-slate-100 pb-4">
           <div className="flex items-center gap-2.5">
             <span className="grid h-10 w-10 place-items-center rounded-2xl bg-blue-100 text-blue-700 font-bold">
@@ -72,7 +89,7 @@ export function PatientRegistrationModal({ onClose, onSuccess }: ModalProps) {
             </span>
             <div>
               <h2 className="text-xl font-black text-slate-900">Register New Patient</h2>
-              <p className="text-xs text-slate-500">Real Supabase Database Patient Intake Form</p>
+              <p className="text-xs text-slate-500">Comprehensive Rural Health Intake Form</p>
             </div>
           </div>
           <button onClick={onClose} className="h-8 w-8 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 grid place-items-center">
@@ -87,6 +104,13 @@ export function PatientRegistrationModal({ onClose, onSuccess }: ModalProps) {
           </div>
         )}
 
+        {successMsg && (
+          <div className="mt-4 flex items-center gap-2 rounded-xl bg-emerald-50 border border-emerald-200 p-3 text-xs font-bold text-emerald-800">
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+            <span>{successMsg}</span>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
           <div>
             <label className="block text-xs font-bold text-slate-700">Patient Full Name *</label>
@@ -95,12 +119,12 @@ export function PatientRegistrationModal({ onClose, onSuccess }: ModalProps) {
               type="text"
               value={name}
               onChange={e => setName(e.target.value)}
-              placeholder="e.g. Ramesh Kumar"
+              placeholder="e.g. Sunita Devi"
               className="input mt-1"
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <div>
               <label className="block text-xs font-bold text-slate-700">Age (Years) *</label>
               <input
@@ -110,7 +134,7 @@ export function PatientRegistrationModal({ onClose, onSuccess }: ModalProps) {
                 max={120}
                 value={age}
                 onChange={e => setAge(e.target.value ? Number(e.target.value) : '')}
-                placeholder="e.g. 45"
+                placeholder="e.g. 34"
                 className="input mt-1"
               />
             </div>
@@ -127,11 +151,29 @@ export function PatientRegistrationModal({ onClose, onSuccess }: ModalProps) {
                 <option value="other">Other</option>
               </select>
             </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700">Blood Group</label>
+              <select
+                value={bloodGroup}
+                onChange={e => setBloodGroup(e.target.value)}
+                className="input mt-1 bg-white"
+              >
+                <option value="A+">A+</option>
+                <option value="A-">A-</option>
+                <option value="B+">B+</option>
+                <option value="B-">B-</option>
+                <option value="O+">O+</option>
+                <option value="O-">O-</option>
+                <option value="AB+">AB+</option>
+                <option value="AB-">AB-</option>
+              </select>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold text-slate-700">Village / Gram Panchayat</label>
+              <label className="block text-xs font-bold text-slate-700">Village</label>
               <input
                 type="text"
                 value={village}
@@ -142,12 +184,36 @@ export function PatientRegistrationModal({ onClose, onSuccess }: ModalProps) {
             </div>
 
             <div>
+              <label className="block text-xs font-bold text-slate-700">Gram Panchayat</label>
+              <input
+                type="text"
+                value={gramPanchayat}
+                onChange={e => setGramPanchayat(e.target.value)}
+                placeholder="e.g. Rampur GP"
+                className="input mt-1"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
               <label className="block text-xs font-bold text-slate-700">Mobile Phone</label>
               <input
                 type="tel"
                 value={phone}
                 onChange={e => setPhone(e.target.value)}
                 placeholder="10-digit number"
+                className="input mt-1"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700">Emergency Contact Phone</label>
+              <input
+                type="tel"
+                value={emergencyContact}
+                onChange={e => setEmergencyContact(e.target.value)}
+                placeholder="Family emergency contact"
                 className="input mt-1"
               />
             </div>
@@ -170,9 +236,42 @@ export function PatientRegistrationModal({ onClose, onSuccess }: ModalProps) {
               rows={2}
               value={address}
               onChange={e => setAddress(e.target.value)}
-              placeholder="House number, landmark, street"
+              placeholder="House number, landmark, street, village ward"
               className="input mt-1 resize-none"
             />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 border-t border-slate-100 pt-3">
+            <div>
+              <label className="block text-xs font-bold text-slate-700">Existing Conditions</label>
+              <input
+                type="text"
+                value={conditionsText}
+                onChange={e => setConditionsText(e.target.value)}
+                placeholder="e.g. Diabetes, ANC"
+                className="input mt-1 text-xs"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700">Known Allergies</label>
+              <input
+                type="text"
+                value={allergiesText}
+                onChange={e => setAllergiesText(e.target.value)}
+                placeholder="e.g. Penicillin, Sulfa"
+                className="input mt-1 text-xs"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700">Current Medications</label>
+              <input
+                type="text"
+                value={medicationsText}
+                onChange={e => setMedicationsText(e.target.value)}
+                placeholder="e.g. Metformin, IFA"
+                className="input mt-1 text-xs"
+              />
+            </div>
           </div>
 
           <div className="mt-6 flex justify-end gap-3 border-t border-slate-100 pt-4">

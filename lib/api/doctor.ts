@@ -145,6 +145,12 @@ export async function createPatientDirectly(input: {
   address?: string;
   phone?: string;
   guardianName?: string;
+  emergencyContact?: string;
+  bloodGroup?: string;
+  gramPanchayat?: string;
+  allergies?: string[];
+  existingConditions?: string[];
+  currentMedications?: string[];
 }): Promise<Patient> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
@@ -172,6 +178,12 @@ export async function createPatientDirectly(input: {
       address: input.address?.trim() || null,
       phone: input.phone?.trim() || null,
       guardian_name: input.guardianName?.trim() || null,
+      emergency_contact: input.emergencyContact?.trim() || null,
+      blood_group: input.bloodGroup?.trim() || null,
+      gram_panchayat: input.gramPanchayat?.trim() || null,
+      allergies: input.allergies && input.allergies.length > 0 ? input.allergies : null,
+      existing_conditions: input.existingConditions && input.existingConditions.length > 0 ? input.existingConditions : null,
+      current_medications: input.currentMedications && input.currentMedications.length > 0 ? input.currentMedications : null,
       registered_by: user.id
     })
     .select()

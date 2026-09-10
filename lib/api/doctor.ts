@@ -890,14 +890,28 @@ export async function getDoctors(): Promise<DoctorUser[]> {
   try {
     const { data, error } = await supabase
       .from('users')
-      .select('*, facility:facilities(*)')
+      .select('*')
       .eq('role', 'doctor')
       .order('name');
     if (error) {
       console.error('Supabase getDoctors error:', error);
       throw error;
     }
-    return (data ?? []) as DoctorUser[];
+    const doctors = (data ?? []) as DoctorUser[];
+    const facilityIds = [...new Set(doctors.map(doctor => doctor.facility_id).filter(Boolean))] as string[];
+    if (!facilityIds.length) return doctors;
+
+    const { data: facilities, error: facilitiesError } = await supabase
+      .from('facilities')
+      .select('*')
+      .in('id', facilityIds);
+    if (facilitiesError) throw facilitiesError;
+
+    const facilityById = new Map((facilities ?? []).map(facility => [facility.id, facility as Facility]));
+    return doctors.map(doctor => ({
+      ...doctor,
+      facility: doctor.facility_id ? facilityById.get(doctor.facility_id) : undefined,
+    }));
   } catch (err) {
     console.error('getDoctors failed:', err);
     return [];
@@ -930,7 +944,7 @@ async function hydrateAppointments(appointments: Appointment[]): Promise<Appoint
 
   const [patientsResult, doctorsResult, facilitiesResult] = await Promise.all([
     patientIds.length ? supabase.from('patients').select('*').in('id', patientIds) : Promise.resolve({ data: [], error: null }),
-    doctorIds.length ? supabase.from('users').select('*, facility:facilities(*)').in('id', doctorIds) : Promise.resolve({ data: [], error: null }),
+    doctorIds.length ? supabase.from('users').select('*').in('id', doctorIds) : Promise.resolve({ data: [], error: null }),
     facilityIds.length ? supabase.from('facilities').select('*').in('id', facilityIds) : Promise.resolve({ data: [], error: null }),
   ]);
 

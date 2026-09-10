@@ -7,6 +7,7 @@ import { DashboardShell } from '@/components/dashboard-shell';
 import { Loading } from '@/components/loading';
 import { RiskBadge } from '@/components/risk-badge';
 import { VitalsRecordModal } from '@/components/vitals-record-modal';
+import { PatientLocationSection } from '@/components/patient-location-section';
 import { 
   getPatientDetail, 
   createReferral, 
@@ -166,7 +167,7 @@ export default function PatientDetailPage() {
     date: patient.created_at,
     title: 'Patient Digital Intake Registered',
     type: 'intake',
-    desc: `Registered by community health worker at ${patient.village || 'Gram Panchayat'}.`
+    desc: `Registered by community health worker${patient.village ? ` at ${patient.village}` : ''}.`
   });
 
   records.forEach(r => {
@@ -206,7 +207,7 @@ export default function PatientDetailPage() {
       date: rf.created_at,
       title: `Digital Referral Generated (${rf.status.toUpperCase()})`,
       type: 'referral',
-      desc: `Reason: ${rf.reason}. Destination: ${rf.referred_to_text || 'District Referral Hospital'}.`
+      desc: `Reason: ${rf.reason}. Destination: ${rf.referred_to_text || 'Not specified'}.`
     });
   });
 
@@ -244,7 +245,7 @@ export default function PatientDetailPage() {
               <p className="mt-1 text-xs font-semibold text-slate-600 dark:text-slate-400 flex flex-wrap items-center gap-3">
                 <span>{patient.age} yrs • <span className="capitalize">{patient.gender}</span></span>
                 <span>•</span>
-                <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5 text-slate-400" /> {patient.village || 'Rampur Gram Panchayat'}</span>
+                <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5 text-slate-400" /> {[patient.village, patient.district, patient.state].filter(Boolean).join(', ') || 'Location not set'}</span>
                 <span>•</span>
                 <span>Blood Group: <strong className="text-slate-800 dark:text-slate-200">{patient.blood_group || 'O+'}</strong></span>
               </p>
@@ -317,6 +318,8 @@ export default function PatientDetailPage() {
       {/* TAB 1: OVERVIEW */}
       {activeTab === 'overview' && (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <PatientLocationSection patient={patient} onUpdated={loadPatient} showCoordinates />
+
           <div className="card p-6 border-slate-200">
             <h2 className="text-base font-black text-slate-900 dark:text-slate-100 flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
               <User className="h-5 w-5 text-blue-600" />
@@ -327,8 +330,7 @@ export default function PatientDetailPage() {
               <div><dt className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Full Name</dt><dd className="font-extrabold text-slate-900 dark:text-slate-100 text-sm">{patient.name}</dd></div>
               <div><dt className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Age / Gender</dt><dd className="font-bold text-slate-800 dark:text-slate-200">{patient.age} years • {patient.gender}</dd></div>
               <div><dt className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Mobile Phone</dt><dd className="font-bold text-slate-800 dark:text-slate-200">{patient.phone || 'Not recorded'}</dd></div>
-              <div><dt className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Emergency Contact</dt><dd className="font-bold text-rose-700 dark:text-rose-400">{patient.emergency_contact || patient.emergency_contact_phone || '+91 98765 43211'}</dd></div>
-              <div><dt className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Location & Address</dt><dd className="font-bold text-slate-800 dark:text-slate-200">{patient.address || patient.village || 'Rampur Gram Panchayat, Ward 4'}</dd></div>
+              <div><dt className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Emergency Contact</dt><dd className="font-bold text-rose-700 dark:text-rose-400">{patient.emergency_contact || patient.emergency_contact_phone || 'Not recorded'}</dd></div>
             </dl>
           </div>
 

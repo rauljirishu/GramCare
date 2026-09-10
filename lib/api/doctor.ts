@@ -153,6 +153,13 @@ export async function createPatientDirectly(input: {
   gender: string;
   village?: string;
   address?: string;
+  taluka?: string;
+  district?: string;
+  state?: string;
+  pincode?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  locationSource?: 'GPS' | 'Manual' | 'Existing Record';
   phone?: string;
   guardianName?: string;
   emergencyContact?: string;
@@ -193,6 +200,13 @@ export async function createPatientDirectly(input: {
       gender: input.gender as any,
       village: input.village?.trim() || null,
       address: input.address?.trim() || null,
+      block: input.taluka?.trim() || null,
+      district: input.district?.trim() || null,
+      state: input.state?.trim() || null,
+      pincode: input.pincode?.trim() || null,
+      latitude: input.latitude ?? null,
+      longitude: input.longitude ?? null,
+      location_source: input.locationSource ?? (input.latitude != null ? 'GPS' : 'Manual'),
       phone: input.phone?.trim() || null,
       guardian_name: input.guardianName?.trim() || null,
       emergency_contact: input.emergencyContact?.trim() || null,
@@ -409,7 +423,7 @@ export async function createReferral(input: {
       referred_by: user.id,
       referred_to_facility_id: input.facilityId ?? null,
       referred_to_doctor_id: input.doctorId ?? null,
-      referred_to_text: input.destination || 'District Referral Hospital',
+      referred_to_text: input.destination?.trim() || null,
       reason: input.reason,
       priority: input.priority ?? 'routine',
       symptoms: input.symptoms ?? null,
@@ -435,7 +449,7 @@ export async function createReferral(input: {
   await createNotification({
     patientId: input.patientId,
     title: 'New Inter-Facility Referral Created',
-    message: `Priority ${input.priority ?? 'routine'} referral to ${input.destination || 'District Hospital'}`,
+    message: `Priority ${input.priority ?? 'routine'} referral to ${input.destination || 'selected facility'}`,
     type: 'referral'
   });
 
@@ -779,6 +793,49 @@ export async function getFacilities(): Promise<Facility[]> {
     return (data ?? []) as Facility[];
   } catch (err) {
     console.error('getFacilities failed:', err);
+    return [];
+  }
+}
+
+export async function getNearbyFacilities(
+  latitude: number,
+  longitude: number,
+  limit = 10
+): Promise<import('@/lib/location/types').NearbyFacilityResult[]> {
+  const { haversineDistanceKm } = await import('@/lib/location/distance');
+  const facilities = await getFacilities();
+
+  return facilities
+    .filter((f) => f.latitude != null && f.longitude != null)
+    .map((f) => ({
+      id: f.id,
+      name: f.name,
+      facility_type: f.facility_type ?? null,
+      address: f.address ?? null,
+      village: f.village ?? null,
+      district: f.district ?? null,
+      state: f.state ?? null,
+      referral_available: f.referral_available ?? true,
+      distanceKm: haversineDistanceKm(latitude, longitude, f.latitude!, f.longitude!),
+    }))
+    .sort((a, b) => a.distanceKm - b.distanceKm)
+    .slice(0, limit);
+}
+
+export async function getDistinctVillages(): Promise<string[]> {
+  try {
+    const { data, error } = await supabase
+      .from('patients')
+      .select('village')
+      .not('village', 'is', null)
+      .order('village');
+    if (error) throw error;
+    const villages = new Set<string>();
+    (data ?? []).forEach((row: { village: string | null }) => {
+      if (row.village?.trim()) villages.add(row.village.trim());
+    });
+    return Array.from(villages).sort();
+  } catch {
     return [];
   }
 }

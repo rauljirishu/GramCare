@@ -15,6 +15,7 @@ export type ReferralStatus =
 export type FollowUpStatus = 'upcoming' | 'scheduled' | 'completed' | 'missed';
 export type ReferralPriority = 'routine' | 'priority' | 'urgent';
 export type SyncStatus = 'pending' | 'synced' | 'failed';
+export type LocationSource = 'GPS' | 'Manual' | 'Existing Record';
 
 export interface SyncMetadata {
   local_id?: string;
@@ -67,6 +68,9 @@ export interface Patient extends SyncMetadata {
   district?: string | null;
   state?: string | null;
   pincode?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  location_source?: LocationSource | null;
   phc_assigned?: string | null;
   village_id?: string | null;
   dob?: string | null;
@@ -246,6 +250,12 @@ export interface Facility {
   code?: string | null;
   village?: string | null;
   address?: string | null;
+  district?: string | null;
+  state?: string | null;
+  pincode?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  referral_available?: boolean | null;
   facility_type?: string | null;
   services?: string[] | null;
   status?: string | null;

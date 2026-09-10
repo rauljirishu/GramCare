@@ -5,6 +5,8 @@ import { createPatientDirectly } from '@/lib/api/doctor';
 import { syncEngine } from '@/lib/offline/sync-engine';
 import { UserPlus, X, AlertCircle, CheckCircle2 } from 'lucide-react';
 import type { Patient } from '@/lib/types';
+import { LocationPicker, locationAddressToPatientFields, EMPTY_LOCATION } from '@/components/location-picker';
+import type { LocationAddress } from '@/lib/location/types';
 
 interface ModalProps {
   onClose: () => void;
@@ -15,9 +17,8 @@ export function PatientRegistrationModal({ onClose, onSuccess }: ModalProps) {
   const [name, setName] = useState('');
   const [age, setAge] = useState<number | ''>('');
   const [gender, setGender] = useState('female');
-  const [village, setVillage] = useState('');
+  const [location, setLocation] = useState<LocationAddress>({ ...EMPTY_LOCATION });
   const [gramPanchayat, setGramPanchayat] = useState('');
-  const [address, setAddress] = useState('');
   const [phone, setPhone] = useState('');
   const [guardianName, setGuardianName] = useState('');
   const [emergencyContact, setEmergencyContact] = useState('');
@@ -41,6 +42,7 @@ export function PatientRegistrationModal({ onClose, onSuccess }: ModalProps) {
     const allergies = allergiesText.split(',').map(s => s.trim()).filter(Boolean);
     const existingConditions = conditionsText.split(',').map(s => s.trim()).filter(Boolean);
     const currentMedications = medicationsText.split(',').map(s => s.trim()).filter(Boolean);
+    const locFields = locationAddressToPatientFields(location);
 
     try {
       let patient: Patient;
@@ -48,9 +50,16 @@ export function PatientRegistrationModal({ onClose, onSuccess }: ModalProps) {
         name,
         age: Number(age),
         gender,
-        village,
+        village: locFields.village || undefined,
+        address: locFields.address || undefined,
+        taluka: locFields.block || undefined,
+        district: locFields.district || undefined,
+        state: locFields.state || undefined,
+        pincode: locFields.pincode || undefined,
+        latitude: locFields.latitude,
+        longitude: locFields.longitude,
+        locationSource: locFields.location_source,
         gramPanchayat,
-        address,
         phone,
         guardianName,
         emergencyContact,
@@ -71,9 +80,9 @@ export function PatientRegistrationModal({ onClose, onSuccess }: ModalProps) {
         onSuccess(patient);
         onClose();
       }, 600);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Patient registration failed:', err);
-      setErrorMsg(err?.message || 'Unable to save patient to database. Please check your network and permissions.');
+      setErrorMsg((err as Error)?.message || 'Unable to save patient to database. Please check your network and permissions.');
     } finally {
       setBusy(false);
     }
@@ -171,28 +180,17 @@ export function PatientRegistrationModal({ onClose, onSuccess }: ModalProps) {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-bold text-slate-700">Village</label>
-              <input
-                type="text"
-                value={village}
-                onChange={e => setVillage(e.target.value)}
-                placeholder="e.g. Rampur"
-                className="input mt-1"
-              />
-            </div>
+          <LocationPicker value={location} onChange={setLocation} compact />
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700">Gram Panchayat</label>
-              <input
-                type="text"
-                value={gramPanchayat}
-                onChange={e => setGramPanchayat(e.target.value)}
-                placeholder="e.g. Rampur GP"
-                className="input mt-1"
-              />
-            </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-700">Gram Panchayat</label>
+            <input
+              type="text"
+              value={gramPanchayat}
+              onChange={e => setGramPanchayat(e.target.value)}
+              placeholder="Gram Panchayat name"
+              className="input mt-1"
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -227,17 +225,6 @@ export function PatientRegistrationModal({ onClose, onSuccess }: ModalProps) {
               onChange={e => setGuardianName(e.target.value)}
               placeholder="Guardian's name if applicable"
               className="input mt-1"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-slate-700">Full Address</label>
-            <textarea
-              rows={2}
-              value={address}
-              onChange={e => setAddress(e.target.value)}
-              placeholder="House number, landmark, street, village ward"
-              className="input mt-1 resize-none"
             />
           </div>
 

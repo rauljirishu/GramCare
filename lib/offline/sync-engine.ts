@@ -101,8 +101,21 @@ class GramCareSyncEngine {
     gender: string;
     village?: string;
     address?: string;
+    taluka?: string;
+    district?: string;
+    state?: string;
+    pincode?: string;
+    latitude?: number | null;
+    longitude?: number | null;
+    locationSource?: 'GPS' | 'Manual' | 'Existing Record';
     phone?: string;
     guardianName?: string;
+    emergencyContact?: string;
+    bloodGroup?: string;
+    gramPanchayat?: string;
+    allergies?: string[];
+    existingConditions?: string[];
+    currentMedications?: string[];
   }): Promise<Patient> {
     const localId = `loc_pat_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const now = new Date().toISOString();
@@ -115,8 +128,21 @@ class GramCareSyncEngine {
       gender: input.gender,
       village: input.village?.trim() || null,
       address: input.address?.trim() || null,
+      block: input.taluka?.trim() || null,
+      district: input.district?.trim() || null,
+      state: input.state?.trim() || null,
+      pincode: input.pincode?.trim() || null,
+      latitude: input.latitude ?? null,
+      longitude: input.longitude ?? null,
+      location_source: input.locationSource ?? (input.latitude != null ? 'GPS' : 'Manual'),
       phone: input.phone?.trim() || null,
       guardian_name: input.guardianName?.trim() || null,
+      emergency_contact: input.emergencyContact?.trim() || null,
+      blood_group: input.bloodGroup?.trim() || null,
+      gram_panchayat: input.gramPanchayat?.trim() || null,
+      allergies: input.allergies && input.allergies.length > 0 ? input.allergies : null,
+      existing_conditions: input.existingConditions && input.existingConditions.length > 0 ? input.existingConditions : null,
+      current_medications: input.currentMedications && input.currentMedications.length > 0 ? input.currentMedications : null,
       sync_status: 'pending',
       sync_attempts: 0,
       created_at: now

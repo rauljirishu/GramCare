@@ -156,3 +156,18 @@ END
 $$;
 
 NOTIFY pgrst, 'reload schema';
+
+SELECT
+  c.conname AS constraint_name,
+  child_col.attname AS appointment_column,
+  parent_table.relname AS referenced_table,
+  parent_col.attname AS referenced_column
+FROM pg_constraint c
+JOIN pg_class child_table ON child_table.oid = c.conrelid
+JOIN pg_class parent_table ON parent_table.oid = c.confrelid
+JOIN pg_attribute child_col ON child_col.attrelid = c.conrelid AND child_col.attnum = c.conkey[1]
+JOIN pg_attribute parent_col ON parent_col.attrelid = c.confrelid AND parent_col.attnum = c.confkey[1]
+WHERE c.contype = 'f'
+  AND child_table.relname = 'appointments'
+  AND child_col.attname IN ('patient_id', 'doctor_id', 'facility_id', 'referral_id')
+ORDER BY child_col.attname;

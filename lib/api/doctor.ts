@@ -908,17 +908,46 @@ export async function getAppointments(): Promise<Appointment[]> {
   try {
     const { data, error } = await supabase
       .from('appointments')
-      .select('*, patient:patients(*), doctor:users(*), facility:facilities(*)')
+      .select('*')
       .order('appointment_date', { ascending: true });
     if (error) {
       console.error('Supabase getAppointments error:', error);
       throw error;
     }
-    return (data ?? []) as Appointment[];
+    return hydrateAppointments((data ?? []) as Appointment[]);
   } catch (err) {
     console.error('getAppointments failed:', err);
     return [];
   }
+}
+
+async function hydrateAppointments(appointments: Appointment[]): Promise<Appointment[]> {
+  if (!appointments.length) return appointments;
+
+  const patientIds = [...new Set(appointments.map(item => item.patient_id).filter(Boolean))];
+  const doctorIds = [...new Set(appointments.map(item => item.doctor_id).filter(Boolean))] as string[];
+  const facilityIds = [...new Set(appointments.map(item => item.facility_id).filter(Boolean))] as string[];
+
+  const [patientsResult, doctorsResult, facilitiesResult] = await Promise.all([
+    patientIds.length ? supabase.from('patients').select('*').in('id', patientIds) : Promise.resolve({ data: [], error: null }),
+    doctorIds.length ? supabase.from('users').select('*, facility:facilities(*)').in('id', doctorIds) : Promise.resolve({ data: [], error: null }),
+    facilityIds.length ? supabase.from('facilities').select('*').in('id', facilityIds) : Promise.resolve({ data: [], error: null }),
+  ]);
+
+  if (patientsResult.error) throw patientsResult.error;
+  if (doctorsResult.error) throw doctorsResult.error;
+  if (facilitiesResult.error) throw facilitiesResult.error;
+
+  const patients = new Map((patientsResult.data ?? []).map(patient => [patient.id, patient as Patient]));
+  const doctors = new Map((doctorsResult.data ?? []).map(doctor => [doctor.id, doctor as DoctorUser]));
+  const facilities = new Map((facilitiesResult.data ?? []).map(facility => [facility.id, facility as Facility]));
+
+  return appointments.map(appointment => ({
+    ...appointment,
+    patient: patients.get(appointment.patient_id),
+    doctor: appointment.doctor_id ? doctors.get(appointment.doctor_id) : undefined,
+    facility: appointment.facility_id ? facilities.get(appointment.facility_id) : undefined,
+  }));
 }
 
 export async function createAppointment(input: {
@@ -942,7 +971,7 @@ export async function createAppointment(input: {
       clinical_notes: input.clinicalNotes ?? null,
       status: 'scheduled'
     })
-    .select('*, patient:patients(*), doctor:users(*), facility:facilities(*)')
+    .select('*')
     .single();
 
   if (error) {
@@ -964,7 +993,8 @@ export async function createAppointment(input: {
     type: 'referral'
   });
 
-  return data as Appointment;
+  const [appointment] = await hydrateAppointments([data as Appointment]);
+  return appointment;
 }
 
 export async function resetDemoData(): Promise<boolean> {

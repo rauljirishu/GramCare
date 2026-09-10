@@ -25,6 +25,9 @@ export interface PatientFilterOptions {
   riskLevel?: string;
   village?: string;
   gender?: string;
+  referralStatus?: string;
+  syncStatus?: string;
+  locationAvailability?: string;
   demoFilter?: 'all' | 'real' | 'demo';
   ageMin?: number;
   ageMax?: number;
@@ -127,7 +130,15 @@ export async function getPatients(options: PatientFilterOptions = {}): Promise<P
 
     let result: PatientRow[] = patients.map(p => ({
       ...p,
-      latestRisk: latest.get(p.id) ?? null
+      latestRisk: latest.get(p.id) ?? (p.risk_level ? {
+        id: `patient-risk-${p.id}`,
+        patient_id: p.id,
+        health_record_id: null,
+        risk_score: p.risk_score ?? 0,
+        risk_level: p.risk_level,
+        model_version: 'manual-intake',
+        assessed_at: p.created_at
+      } as RiskAssessment : null)
     }));
 
     if (options.riskLevel && options.riskLevel !== 'all') {
@@ -138,6 +149,17 @@ export async function getPatients(options: PatientFilterOptions = {}): Promise<P
     }
     if (options.gender && options.gender !== 'all') {
       result = result.filter(p => p.gender?.toLowerCase() === options.gender?.toLowerCase());
+    }
+    if (options.referralStatus && options.referralStatus !== 'all') {
+      result = result.filter(p => (p.referral_status || 'none') === options.referralStatus);
+    }
+    if (options.syncStatus && options.syncStatus !== 'all') {
+      result = result.filter(p => (p.sync_status || 'synced') === options.syncStatus);
+    }
+    if (options.locationAvailability && options.locationAvailability !== 'all') {
+      result = result.filter(p => options.locationAvailability === 'available'
+        ? p.latitude != null && p.longitude != null
+        : p.latitude == null || p.longitude == null);
     }
 
     return result;
@@ -159,15 +181,27 @@ export async function createPatientDirectly(input: {
   pincode?: string;
   latitude?: number | null;
   longitude?: number | null;
+  locationAccuracy?: number | null;
+  locationCapturedAt?: string | null;
   locationSource?: 'GPS' | 'Manual' | 'Existing Record';
   phone?: string;
   guardianName?: string;
   emergencyContact?: string;
   bloodGroup?: string;
   gramPanchayat?: string;
+  phcAssigned?: string;
   allergies?: string[];
   existingConditions?: string[];
   currentMedications?: string[];
+  assignedWorker?: string;
+  lastVisitDate?: string;
+  nextFollowUpDate?: string;
+  referralStatus?: string;
+  referredHospital?: string;
+  notes?: string;
+  symptoms?: string;
+  riskLevel?: RiskLevel;
+  riskScore?: number;
 }): Promise<Patient> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
@@ -206,15 +240,27 @@ export async function createPatientDirectly(input: {
       pincode: input.pincode?.trim() || null,
       latitude: input.latitude ?? null,
       longitude: input.longitude ?? null,
+      location_accuracy: input.locationAccuracy ?? null,
+      location_captured_at: input.locationCapturedAt ?? null,
       location_source: input.locationSource ?? (input.latitude != null ? 'GPS' : 'Manual'),
       phone: input.phone?.trim() || null,
       guardian_name: input.guardianName?.trim() || null,
       emergency_contact: input.emergencyContact?.trim() || null,
       blood_group: input.bloodGroup?.trim() || null,
       gram_panchayat: input.gramPanchayat?.trim() || null,
+      phc_assigned: input.phcAssigned?.trim() || null,
       allergies: input.allergies && input.allergies.length > 0 ? input.allergies : null,
       existing_conditions: input.existingConditions && input.existingConditions.length > 0 ? input.existingConditions : null,
       current_medications: input.currentMedications && input.currentMedications.length > 0 ? input.currentMedications : null,
+      assigned_worker: input.assignedWorker?.trim() || null,
+      last_visit_date: input.lastVisitDate || null,
+      next_follow_up_date: input.nextFollowUpDate || null,
+      referral_status: input.referralStatus || null,
+      referred_hospital: input.referredHospital?.trim() || null,
+      notes: input.notes?.trim() || null,
+      symptoms: input.symptoms?.trim() || null,
+      risk_level: input.riskLevel ?? null,
+      risk_score: input.riskScore ?? null,
       registered_by: user.id
     })
     .select()

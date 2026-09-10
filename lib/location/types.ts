@@ -9,6 +9,8 @@ export interface LocationAddress {
   pincode: string;
   latitude: number | null;
   longitude: number | null;
+  accuracy: number | null;
+  capturedAt: string | null;
   locationSource: LocationSource;
 }
 
@@ -21,6 +23,8 @@ export const EMPTY_LOCATION: LocationAddress = {
   pincode: '',
   latitude: null,
   longitude: null,
+  accuracy: null,
+  capturedAt: null,
   locationSource: 'Manual',
 };
 

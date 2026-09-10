@@ -70,8 +70,19 @@ export interface Patient extends SyncMetadata {
   pincode?: string | null;
   latitude?: number | null;
   longitude?: number | null;
+  location_accuracy?: number | null;
+  location_captured_at?: string | null;
   location_source?: LocationSource | null;
   phc_assigned?: string | null;
+  assigned_worker?: string | null;
+  last_visit_date?: string | null;
+  next_follow_up_date?: string | null;
+  referral_status?: ReferralStatus | 'none' | null;
+  referred_hospital?: string | null;
+  notes?: string | null;
+  symptoms?: string | null;
+  risk_score?: number | null;
+  risk_level?: RiskLevel | null;
   village_id?: string | null;
   dob?: string | null;
   preferred_language?: string | null;
@@ -212,6 +223,7 @@ export interface PatientRow extends Patient {
   latestRisk: RiskAssessment | null;
   recordsCount?: number;
   referralsCount?: number;
+  pendingSync?: boolean;
 }
 
 export interface DashboardStats {

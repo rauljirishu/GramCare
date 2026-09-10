@@ -104,6 +104,9 @@ export function PatientLocationSection({ patient, onUpdated, showCoordinates = t
           {showCoordinates && patient.latitude != null && patient.longitude != null && (
             <div><dt className="text-slate-400 font-bold uppercase text-[10px]">Coordinates</dt><dd className="font-mono font-bold text-slate-600 dark:text-slate-400">{patient.latitude.toFixed(5)}, {patient.longitude.toFixed(5)}</dd></div>
           )}
+          {showCoordinates && patient.location_accuracy != null && (
+            <div><dt className="text-slate-400 font-bold uppercase text-[10px]">GPS Accuracy</dt><dd className="font-bold text-slate-600 dark:text-slate-400">{Math.round(patient.location_accuracy)} meters</dd></div>
+          )}
           {patient.location_source && (
             <div><dt className="text-slate-400 font-bold uppercase text-[10px]">Source</dt><dd className="font-bold text-slate-600">{patient.location_source}</dd></div>
           )}
@@ -126,6 +129,11 @@ export function PatientLocationSection({ patient, onUpdated, showCoordinates = t
             <Map className="h-4 w-4" />
             {showMap ? 'Hide map' : 'View on map'}
           </button>
+        )}
+        {patient.latitude != null && patient.longitude != null && (
+          <a className="secondary-btn text-xs py-2" target="_blank" rel="noreferrer" href={`https://www.openstreetmap.org/?mlat=${encodeURIComponent(patient.latitude)}&mlon=${encodeURIComponent(patient.longitude)}#map=16/${encodeURIComponent(patient.latitude)}/${encodeURIComponent(patient.longitude)}`}>
+            Open map service
+          </a>
         )}
       </div>
 

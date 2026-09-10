@@ -107,15 +107,27 @@ class GramCareSyncEngine {
     pincode?: string;
     latitude?: number | null;
     longitude?: number | null;
+    locationAccuracy?: number | null;
+    locationCapturedAt?: string | null;
     locationSource?: 'GPS' | 'Manual' | 'Existing Record';
     phone?: string;
     guardianName?: string;
     emergencyContact?: string;
     bloodGroup?: string;
     gramPanchayat?: string;
+    phcAssigned?: string;
     allergies?: string[];
     existingConditions?: string[];
     currentMedications?: string[];
+    assignedWorker?: string;
+    lastVisitDate?: string;
+    nextFollowUpDate?: string;
+    referralStatus?: string;
+    referredHospital?: string;
+    notes?: string;
+    symptoms?: string;
+    riskLevel?: Patient['risk_level'];
+    riskScore?: number;
   }): Promise<Patient> {
     const localId = `loc_pat_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const now = new Date().toISOString();
@@ -134,15 +146,27 @@ class GramCareSyncEngine {
       pincode: input.pincode?.trim() || null,
       latitude: input.latitude ?? null,
       longitude: input.longitude ?? null,
+      location_accuracy: input.locationAccuracy ?? null,
+      location_captured_at: input.locationCapturedAt ?? null,
       location_source: input.locationSource ?? (input.latitude != null ? 'GPS' : 'Manual'),
       phone: input.phone?.trim() || null,
       guardian_name: input.guardianName?.trim() || null,
       emergency_contact: input.emergencyContact?.trim() || null,
       blood_group: input.bloodGroup?.trim() || null,
       gram_panchayat: input.gramPanchayat?.trim() || null,
+      phc_assigned: input.phcAssigned?.trim() || null,
       allergies: input.allergies && input.allergies.length > 0 ? input.allergies : null,
       existing_conditions: input.existingConditions && input.existingConditions.length > 0 ? input.existingConditions : null,
       current_medications: input.currentMedications && input.currentMedications.length > 0 ? input.currentMedications : null,
+      assigned_worker: input.assignedWorker?.trim() || null,
+      last_visit_date: input.lastVisitDate || null,
+      next_follow_up_date: input.nextFollowUpDate || null,
+      referral_status: (input.referralStatus as Patient['referral_status']) || null,
+      referred_hospital: input.referredHospital?.trim() || null,
+      notes: input.notes?.trim() || null,
+      symptoms: input.symptoms?.trim() || null,
+      risk_level: input.riskLevel ?? null,
+      risk_score: input.riskScore ?? null,
       sync_status: 'pending',
       sync_attempts: 0,
       created_at: now

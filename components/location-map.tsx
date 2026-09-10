@@ -7,7 +7,8 @@ export interface MapMarker {
   lat: number;
   lng: number;
   label?: string;
-  color?: 'blue' | 'green' | 'red';
+  color?: 'blue' | 'green' | 'amber' | 'red';
+  href?: string;
 }
 
 interface LocationMapProps {
@@ -48,7 +49,6 @@ export function LocationMap({
 
     (async () => {
       const L = (await import('leaflet')).default;
-      await import('leaflet/dist/leaflet.css');
       if (cancelled || !containerRef.current) return;
 
       fixLeafletIcons(L);
@@ -82,7 +82,7 @@ export function LocationMap({
           lng += (Math.random() - 0.5) * 0.01;
         }
 
-        const iconColor = m.color === 'green' ? '#10b981' : m.color === 'red' ? '#ef4444' : '#2563eb';
+        const iconColor = m.color === 'green' ? '#10b981' : m.color === 'amber' ? '#f59e0b' : m.color === 'red' ? '#ef4444' : '#2563eb';
         const marker = L.circleMarker([lat, lng], {
           radius: 8,
           fillColor: iconColor,
@@ -93,6 +93,9 @@ export function LocationMap({
 
         if (m.label) {
           marker.bindPopup(m.label);
+        }
+        if (m.href) {
+          marker.on('click', () => window.location.assign(m.href as string));
         }
 
         bounds.push([lat, lng]);

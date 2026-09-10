@@ -27,7 +27,7 @@ export function LocationPicker({ value, onChange, compact = false }: LocationPic
   const [gpsSuccess, setGpsSuccess] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<
-    Array<{ displayName: string; lat: number; lon: number; address: Omit<LocationAddress, 'latitude' | 'longitude' | 'locationSource'> }>
+    Array<{ displayName: string; lat: number; lon: number; address: Pick<LocationAddress, 'address' | 'village' | 'taluka' | 'district' | 'state' | 'pincode'> }>
   >([]);
   const [searchLoading, setSearchLoading] = useState(false);
 
@@ -54,6 +54,8 @@ export function LocationPicker({ value, onChange, compact = false }: LocationPic
         ...value,
         latitude: pos.latitude,
         longitude: pos.longitude,
+        accuracy: pos.accuracy ?? null,
+        capturedAt: new Date().toISOString(),
         locationSource: 'GPS',
       };
 
@@ -69,10 +71,10 @@ export function LocationPicker({ value, onChange, compact = false }: LocationPic
           pincode: geocode.data.pincode || value.pincode,
         };
         setGpsSuccess(
-          `Location detected: ${[geocode.data.village, geocode.data.district, geocode.data.state].filter(Boolean).join(', ') || 'Coordinates captured'}`
+          `Location captured. Latitude: ${pos.latitude.toFixed(5)} · Longitude: ${pos.longitude.toFixed(5)} · Accuracy: ${Math.round(pos.accuracy || 0)} meters. ${[geocode.data.village, geocode.data.district, geocode.data.state].filter(Boolean).join(', ') || 'Address unavailable'}`
         );
       } else {
-        setGpsSuccess(`Coordinates captured (${pos.latitude.toFixed(5)}, ${pos.longitude.toFixed(5)}). ${geocode.error}`);
+        setGpsSuccess(`Location captured. Latitude: ${pos.latitude.toFixed(5)} · Longitude: ${pos.longitude.toFixed(5)} · Accuracy: ${Math.round(pos.accuracy || 0)} meters. ${geocode.error}`);
       }
 
       onChange(updated);
@@ -108,6 +110,8 @@ export function LocationPicker({ value, onChange, compact = false }: LocationPic
       pincode: result.address.pincode || value.pincode,
       latitude: result.lat,
       longitude: result.lon,
+      accuracy: null,
+      capturedAt: new Date().toISOString(),
       locationSource: 'Manual',
     });
     setSearchResults([]);
@@ -129,7 +133,7 @@ export function LocationPicker({ value, onChange, compact = false }: LocationPic
             className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-3 py-1.5 text-[11px] font-bold text-white hover:bg-blue-700 disabled:opacity-60 transition"
           >
             {gpsLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Navigation className="h-3.5 w-3.5" />}
-            Use current location
+            {value.latitude != null ? 'Refresh Location' : 'Capture GPS Location'}
           </button>
           <button
             type="button"
@@ -267,6 +271,7 @@ export function LocationPicker({ value, onChange, compact = false }: LocationPic
         <p className="text-[10px] font-semibold text-slate-400">
           Coordinates: {value.latitude.toFixed(5)}, {value.longitude.toFixed(5)}
           {value.locationSource && ` · Source: ${value.locationSource}`}
+          {value.accuracy != null && ` · Accuracy: ${Math.round(value.accuracy)} m`}
         </p>
       )}
     </div>
@@ -282,6 +287,8 @@ export function patientToLocationAddress(patient: {
   pincode?: string | null;
   latitude?: number | null;
   longitude?: number | null;
+  location_accuracy?: number | null;
+  location_captured_at?: string | null;
   location_source?: string | null;
 }): LocationAddress {
   return {
@@ -293,6 +300,8 @@ export function patientToLocationAddress(patient: {
     pincode: patient.pincode || '',
     latitude: patient.latitude ?? null,
     longitude: patient.longitude ?? null,
+    accuracy: patient.location_accuracy ?? null,
+    capturedAt: patient.location_captured_at ?? null,
     locationSource: (patient.location_source as LocationAddress['locationSource']) || 'Manual',
   };
 }
@@ -307,6 +316,8 @@ export function locationAddressToPatientFields(loc: LocationAddress) {
     pincode: loc.pincode.trim() || null,
     latitude: loc.latitude,
     longitude: loc.longitude,
+    location_accuracy: loc.accuracy,
+    location_captured_at: loc.capturedAt,
     location_source: loc.locationSource,
   };
 }

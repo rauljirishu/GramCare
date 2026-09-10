@@ -2,18 +2,20 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { DashboardShell } from '@/components/dashboard-shell';
 import { Loading } from '@/components/loading';
 import { RiskBadge } from '@/components/risk-badge';
 import { VitalsRecordModal } from '@/components/vitals-record-modal';
 import { PatientLocationSection } from '@/components/patient-location-section';
+import { PatientRegistrationModal } from '@/components/patient-registration-modal';
 import { 
   getPatientDetail, 
   createReferral, 
   getPatientVisits, 
   createVisit, 
   overrideRiskAssessment 
+  , deletePatient
 } from '@/lib/api/doctor';
 import { AI_DISCLAIMER_TEXT, predictOfflineRisk } from '@/lib/ai/risk-predictor';
 import type { Patient, HealthRecord, RiskAssessment, Referral, FollowUp, Visit, RiskLevel } from '@/lib/types';
@@ -46,6 +48,7 @@ import {
 export default function PatientDetailPage() {
   const params = useParams<{ id: string }>();
   const patientId = params?.id || '';
+  const router = useRouter();
 
   const [data, setData] = useState<{
     patient: Patient;
@@ -63,6 +66,7 @@ export default function PatientDetailPage() {
   const [showVitalsModal, setShowVitalsModal] = useState(false);
   const [showVisitModal, setShowVisitModal] = useState(false);
   const [showOverrideModal, setShowOverrideModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   // New Visit Form state
   const [visitForm, setVisitForm] = useState({
@@ -253,6 +257,8 @@ export default function PatientDetailPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
+            <button onClick={() => setShowEditModal(true)} className="secondary-btn text-xs py-2.5 px-4 font-bold"><Edit3 className="h-4 w-4" /><span>Edit Patient</span></button>
+            <button onClick={async () => { if (window.confirm('Delete this patient record? This cannot be undone.')) { await deletePatient(patient.id); router.replace('/patients'); } }} className="secondary-btn text-xs py-2.5 px-4 font-bold text-rose-700 border-rose-200"><span>Delete</span></button>
             <button
               onClick={() => setShowVisitModal(true)}
               className="secondary-btn text-xs py-2.5 px-4 font-bold"
@@ -575,6 +581,14 @@ export default function PatientDetailPage() {
       )}
 
       {/* Vitals Record Modal */}
+      {showEditModal && (
+        <PatientRegistrationModal
+          patient={patient}
+          onClose={() => setShowEditModal(false)}
+          onSuccess={() => { setShowEditModal(false); loadPatient(); }}
+        />
+      )}
+
       {showVitalsModal && (
         <VitalsRecordModal
           patients={[patient]}

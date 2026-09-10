@@ -60,8 +60,9 @@ BEGIN
         WHERE n.nspname = 'public'
           AND t.relname = 'appointments'
           AND c.contype = 'f'
-          AND pg_get_constraintdef(c.oid)
-              ILIKE '%FOREIGN KEY (patient_id) REFERENCES public.patients(id)%'
+          -- PostgreSQL may omit `public.` when displaying a constraint
+          -- definition.  The stable constraint name prevents a duplicate add.
+          AND c.conname = 'appointments_patient_id_fkey'
     ) THEN
 
         ALTER TABLE public.appointments
@@ -89,8 +90,7 @@ BEGIN
         WHERE n.nspname = 'public'
           AND t.relname = 'appointments'
           AND c.contype = 'f'
-          AND pg_get_constraintdef(c.oid)
-              ILIKE '%FOREIGN KEY (doctor_id) REFERENCES public.users(id)%'
+          AND c.conname = 'appointments_doctor_id_fkey'
     ) THEN
 
         ALTER TABLE public.appointments
@@ -117,8 +117,7 @@ BEGIN
         WHERE n.nspname = 'public'
           AND t.relname = 'appointments'
           AND c.contype = 'f'
-          AND pg_get_constraintdef(c.oid)
-              ILIKE '%FOREIGN KEY (facility_id) REFERENCES public.facilities(id)%'
+          AND c.conname = 'appointments_facility_id_fkey'
     ) THEN
 
         ALTER TABLE public.appointments
@@ -145,8 +144,7 @@ BEGIN
         WHERE n.nspname = 'public'
           AND t.relname = 'appointments'
           AND c.contype = 'f'
-          AND pg_get_constraintdef(c.oid)
-              ILIKE '%FOREIGN KEY (referral_id) REFERENCES public.referrals(id)%'
+          AND c.conname = 'appointments_referral_id_fkey'
     ) THEN
 
         ALTER TABLE public.appointments

@@ -973,30 +973,46 @@ export async function createAppointment(input: {
   purpose: string;
   clinicalNotes?: string;
 }): Promise<Appointment> {
+  const payload = {
+    patient_id: input.patientId,
+    doctor_id: input.doctorId ?? null,
+    facility_id: input.facilityId ?? null,
+    referral_id: input.referralId ?? null,
+    appointment_date: input.appointmentDate,
+    purpose: input.purpose,
+    clinical_notes: input.clinicalNotes ?? null,
+    status: 'scheduled'
+  };
+
+  let insertedRow: any = null;
+
   const { data, error } = await supabase
     .from('appointments')
-    .insert({
-      patient_id: input.patientId,
-      doctor_id: input.doctorId ?? null,
-      facility_id: input.facilityId ?? null,
-      referral_id: input.referralId ?? null,
-      appointment_date: input.appointmentDate,
-      purpose: input.purpose,
-      clinical_notes: input.clinicalNotes ?? null,
-      status: 'scheduled'
-    })
-    .select('*')
+    .insert(payload)
+    .select('id, patient_id, doctor_id, facility_id, referral_id, appointment_date, purpose, status, clinical_notes, created_at')
     .single();
 
   if (error) {
-    console.error('Supabase createAppointment error:', error);
-    throw new Error(`Failed to schedule appointment: ${error.message}`);
+    console.error('Supabase createAppointment initial error:', error);
+    // Retry with basic insert if schema cache warning occurred
+    const fallbackRes = await supabase
+      .from('appointments')
+      .insert(payload)
+      .select()
+      .single();
+
+    if (fallbackRes.error) {
+      throw new Error(`Failed to schedule appointment: ${error.message}`);
+    }
+    insertedRow = fallbackRes.data;
+  } else {
+    insertedRow = data;
   }
 
   await recordAuditLog({
     action: 'CREATE_APPOINTMENT',
     entityType: 'appointment',
-    entityId: data.id,
+    entityId: insertedRow.id,
     details: { patient_id: input.patientId, appointment_date: input.appointmentDate }
   });
 
@@ -1007,7 +1023,7 @@ export async function createAppointment(input: {
     type: 'referral'
   });
 
-  const [appointment] = await hydrateAppointments([data as Appointment]);
+  const [appointment] = await hydrateAppointments([insertedRow as Appointment]);
   return appointment;
 }
 

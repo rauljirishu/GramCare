@@ -179,11 +179,7 @@ export function predictOfflineRisk(vitals: VitalsInput): PredictionResult {
   let priority: 'URGENT REVIEW' | 'PRIORITY TRIAGE' | 'ROUTINE MONITORING' = 'ROUTINE MONITORING';
   let recommendedAction = 'Routine community healthcare checkup. Continue standard monitoring.';
 
-  if (finalScore >= 85) {
-    riskLevel = 'critical';
-    priority = 'URGENT REVIEW';
-    recommendedAction = 'CRITICAL EMERGENCY: Immediate doctor review & priority 108 ambulance transport to District Hospital.';
-  } else if (finalScore >= 65) {
+  if (finalScore >= 65) {
     riskLevel = 'high';
     priority = 'URGENT REVIEW';
     recommendedAction = 'URGENT: High Risk Patient! Initiate immediate doctor referral and emergency transport to PHC/CHC.';

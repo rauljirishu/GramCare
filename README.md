@@ -1,6 +1,6 @@
-# GramCare (GramSwasthya) — Smart Rural Healthcare Platform (SIH 2026)
+# GramCare — Connected Healthcare for Rural Communities
 
-GramCare is an offline-first, AI-assisted rural healthcare decision support and digital referral platform built for Smart India Hackathon (SIH 2026). It empowers ASHA workers, ANMs, doctors, and hospital administrators to coordinate care across primary health centers (PHC), community health centers (CHC), and sub-divisional district hospitals.
+GramCare is an offline-first, AI-assisted rural healthcare decision-support and digital referral platform. It helps health workers, PHCs, doctors, and hospitals coordinate care across rural healthcare settings.
 
 ---
 

@@ -1,4 +1,4 @@
--- GramCare / GramSwasthya Complete Platform Upgrade Migration (SIH26133)
+-- GramCare complete platform upgrade migration
 -- Adds extended roles, full referral lifecycle, clinical visits, referral events, and RLS policies.
 
 -- 1. Extend user_role enum

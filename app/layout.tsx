@@ -5,7 +5,7 @@ import { SettingsProvider } from '@/lib/context/settings-context';
 import { PwaRegister } from '@/components/pwa-register';
 
 export const metadata: Metadata = {
-  title: 'GramSwasthya | Rural Healthcare Platform',
+  title: 'GramCare | Rural Healthcare Platform',
   description: 'Secure, offline-first rural healthcare coordination platform.'
 };
 

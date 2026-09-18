@@ -1,4 +1,4 @@
--- GramCare / GramSwasthya SIH26133 Enhancements Migration
+-- GramCare platform enhancements migration
 -- Adds extended patient fields, audit logging, notifications, and referral priority columns safely.
 
 alter table public.patients add column if not exists emergency_contact text;

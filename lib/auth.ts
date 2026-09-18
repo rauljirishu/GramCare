@@ -1,8 +1,8 @@
 import { supabase } from '@/lib/supabase/client';
 
 export type DatabaseRole = 'central_authority' | 'phc_head' | 'phc_worker' | 'patient';
-export type UiRole = 'central' | 'head' | 'worker' | 'patient';
-export const uiRoleFor = (role: string): UiRole => ({ central_authority:'central', phc_head:'head', phc_worker:'worker', patient:'patient' }[role] || 'patient') as UiRole;
+export type UiRole = 'central' | 'head' | 'worker' | 'doctor' | 'hospital' | 'patient';
+export const uiRoleFor = (role: string): UiRole => ({ central_authority:'central', phc_head:'head', phc_worker:'worker', doctor:'doctor', hospital:'hospital', patient:'patient' }[role] || 'patient') as UiRole;
 
 export async function currentRole(): Promise<UiRole | null> {
   const { data: { user } } = await supabase.auth.getUser();

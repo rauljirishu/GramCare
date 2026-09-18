@@ -1,6 +1,6 @@
-export type GramRole = 'central' | 'head' | 'worker' | 'patient';
+export type GramRole = 'central' | 'head' | 'worker' | 'doctor' | 'hospital' | 'patient';
 
-export const roleLabels: Record<GramRole, string> = { central: 'Central Authority', head: 'Area / PHC Head', worker: 'PHC Worker', patient: 'Patient' };
+export const roleLabels: Record<GramRole, string> = { central: 'Central Authority', head: 'Area / PHC Head', worker: 'Health Worker', doctor: 'Doctor', hospital: 'Hospital', patient: 'Patient' };
 
 export type GramPatient = { id: string; name: string; age: number; gender: string; village: string; contact: string; bloodGroup: string; phc: string; conditions: string[]; allergies: string[]; maternal?: boolean; registered: string; indicators: string[] };
 export const patients: GramPatient[] = [

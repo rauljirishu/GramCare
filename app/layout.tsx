@@ -2,10 +2,11 @@ import './globals.css';
 import 'leaflet/dist/leaflet.css';
 import type { Metadata } from 'next';
 import { SettingsProvider } from '@/lib/context/settings-context';
+import { PwaRegister } from '@/components/pwa-register';
 
 export const metadata: Metadata = {
-  title: 'GramCare | Rural Healthcare Platform',
-  description: 'AI-assisted rural health triage, digital referral, and doctor control center platform.'
+  title: 'GramSwasthya | Rural Healthcare Platform',
+  description: 'Secure, offline-first rural healthcare coordination platform.'
 };
 
 export default function RootLayout({
@@ -22,6 +23,7 @@ export default function RootLayout({
       </head>
       <body>
         <SettingsProvider>
+          <PwaRegister />
           {children}
         </SettingsProvider>
       </body>

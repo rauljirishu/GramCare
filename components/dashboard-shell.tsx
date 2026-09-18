@@ -1,129 +1,16 @@
 'use client';
-
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase/client';
-import { useTranslation } from '@/lib/i18n/use-translation';
-import { DashboardHeader } from '@/components/dashboard-header';
-import { 
-  LayoutDashboard, 
-  Users, 
-  AlertTriangle, 
-  CalendarCheck, 
-  ArrowUpRight,
-  UserPlus,
-  BarChart3,
-  User,
-  Settings,
-  LogOut,
-  Stethoscope,
-  ShieldCheck,
-  Building2
-} from 'lucide-react';
+import { GramRole, roleLabels } from '@/lib/grams-data';
+import { currentRole } from '@/lib/auth';
+import { Bell, CalendarDays, HeartPulse, LayoutDashboard, LogOut, Map, Menu, Package, ShieldCheck, Users, X, BookOpen, ClipboardList } from 'lucide-react';
 
-export function DashboardShell({ children }: { children: React.ReactNode }) {
-  const path = usePathname();
-  const router = useRouter();
-  const { t } = useTranslation();
-  const [userRole, setUserRole] = useState<'doctor' | 'admin' | 'asha'>('doctor');
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data: profile } = await supabase.from('users').select('role').eq('id', user.id).single();
-          if (profile?.role) {
-            setUserRole(profile.role);
-          }
-        }
-      } catch {
-        // Fallback
-      }
-    })();
-  }, []);
-
-  async function signOut() {
-    await supabase.auth.signOut();
-    router.replace('/login');
-  }
-
-  const nav = [
-    { href: '/dashboard', labelKey: 'navDashboard', icon: <LayoutDashboard className="h-4 w-4" /> },
-    { href: '/patients', labelKey: 'navPatients', icon: <Users className="h-4 w-4" /> },
-    { href: '/high-risk', labelKey: 'navHighRisk', icon: <AlertTriangle className="h-4 w-4 text-rose-400" /> },
-    { href: '/referrals', labelKey: 'navReferrals', icon: <ArrowUpRight className="h-4 w-4 text-violet-400" /> },
-    { href: '/hospital', labelKey: 'navHospital', icon: <Building2 className="h-4 w-4 text-emerald-400" /> },
-    { href: '/appointments', labelKey: 'navAppointments', icon: <CalendarCheck className="h-4 w-4 text-violet-400" /> },
-    { href: '/doctors', labelKey: 'navDoctors', icon: <Stethoscope className="h-4 w-4 text-blue-400" /> },
-    { href: '/facilities', labelKey: 'navFacilities', icon: <Building2 className="h-4 w-4 text-teal-400" /> },
-    { href: '/follow-ups', labelKey: 'navFollowUps', icon: <CalendarCheck className="h-4 w-4 text-emerald-400" /> },
-    { href: '/workspace', labelKey: 'navWorkspace', icon: <UserPlus className="h-4 w-4 text-blue-400" /> },
-    { href: '/analytics', labelKey: 'navAnalytics', icon: <BarChart3 className="h-4 w-4 text-indigo-400" /> },
-    { href: '/profile', labelKey: 'navProfile', icon: <User className="h-4 w-4 text-blue-300" /> },
-    { href: '/settings', labelKey: 'navSettings', icon: <Settings className="h-4 w-4 text-indigo-300" /> },
-  ];
-
-  const portalTitle = userRole === 'admin' ? t('adminPortal') : t('doctorPortal');
-  const PortalIcon = userRole === 'admin' ? ShieldCheck : Stethoscope;
-
-  return (
-    <div className="min-h-screen md:flex bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors">
-      {/* Sidebar */}
-      <aside className="border-b border-slate-800 bg-slate-900 px-6 py-7 text-white md:min-h-screen md:w-72 md:border-b-0 flex flex-col justify-between shrink-0">
-        <div>
-          <Link href="/dashboard" className="flex items-center gap-2.5 text-2xl font-black tracking-tight text-white">
-            <span className="grid h-9 w-9 place-items-center rounded-xl bg-blue-600 text-base font-black text-white shadow-md">+</span>
-            Gram<span className="text-blue-400">Care</span>
-          </Link>
-          
-          <div className="mt-2 flex items-center gap-2 text-xs font-bold text-blue-200 bg-white/10 px-3 py-1.5 rounded-xl backdrop-blur">
-            <PortalIcon className="h-4 w-4 text-blue-400 shrink-0" />
-            <span className="truncate">{portalTitle}</span>
-          </div>
-
-          {/* Localized Sidebar Navigation */}
-          <nav className="mt-7 flex gap-2 overflow-x-auto md:block md:space-y-1.5">
-            {nav.map((item) => {
-              const active = path === item.href;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`flex items-center gap-3 whitespace-nowrap rounded-xl px-3.5 py-2.5 text-sm font-extrabold transition-all duration-200 ${
-                    active
-                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30 scale-[1.02]'
-                      : 'text-slate-300 hover:bg-white/10 hover:text-white'
-                  }`}
-                >
-                  {item.icon}
-                  <span>{t(item.labelKey)}</span>
-                </Link>
-              );
-            })}
-          </nav>
-        </div>
-
-        <div className="mt-8 pt-4 border-t border-slate-800">
-          <button
-            onClick={signOut}
-            className="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-extrabold text-slate-400 hover:bg-rose-500/20 hover:text-rose-300 transition"
-          >
-            <LogOut className="h-4 w-4" />
-            <span>{t('navSignOut')}</span>
-          </button>
-        </div>
-      </aside>
-
-      {/* Main Content Area with Header */}
-      <div className="min-w-0 flex-1 flex flex-col">
-        <DashboardHeader />
-
-        <main className="flex-1 p-5 sm:p-9">
-          {children}
-        </main>
-      </div>
-    </div>
-  );
+const allNav = [
+ ['dashboard','Dashboard',LayoutDashboard,['central','head','worker','patient']], ['patients','Patients',Users,['central','head','worker']], ['workers','Workers',Users,['central','head']], ['maternal-care','Maternal Care',HeartPulse,['head','worker','patient']], ['health-camps','Health Camps',CalendarDays,['central','head','worker','patient']], ['health-education','Health Education',BookOpen,['central','head','worker','patient']], ['outbreaks','Outbreaks',ClipboardList,['central','head','worker']], ['resources','Resources',Package,['central','head','worker']], ['map','Healthcare Map',Map,['central','head','worker','patient']], ['reports','Reports',ClipboardList,['central','head']],
+] as const;
+export function DashboardShell({children}:{children:React.ReactNode}) { const path=usePathname(); const router=useRouter(); const [role,setRoleState]=useState<GramRole>('central'); const [open,setOpen]=useState(false); const [language,setLanguage]=useState('English');
+ useEffect(()=>{currentRole().then(found=>{if(found)setRoleState(found);else router.replace('/login')})},[router]); const nav=allNav.filter(x=>(x[3] as readonly GramRole[]).includes(role));
+ async function logout(){await (await import('@/lib/supabase/client')).supabase.auth.signOut();router.push('/login');}
+ return <div className="min-h-screen bg-[#f5f8fc] text-slate-900 md:flex"><aside className={`${open?'fixed inset-y-0 left-0 z-50':'hidden'} w-72 shrink-0 bg-slate-950 p-5 text-white md:sticky md:top-0 md:flex md:h-screen md:flex-col`}><button className="absolute right-4 top-4 md:hidden" onClick={()=>setOpen(false)}><X/></button><Link href="/dashboard" className="flex items-center gap-3 text-xl font-black"><span className="grid h-10 w-10 place-items-center rounded-xl bg-blue-600 text-2xl">+</span><span>Gram<span className="text-blue-400">Swasthya</span></span></Link><p className="mt-2 text-xs font-semibold text-slate-400">Secure • Offline • Connected Rural Healthcare</p><div className="mt-6 rounded-xl border border-slate-700 bg-slate-900 p-3 text-xs"><span className="flex items-center gap-2 font-bold text-blue-200"><ShieldCheck className="h-4 w-4"/>{roleLabels[role]}</span><span className="mt-1 block text-slate-400">Demo role session</span></div><nav className="mt-6 space-y-1 overflow-y-auto">{nav.map(([href,label,Icon])=><Link onClick={()=>setOpen(false)} key={href} href={`/${href}`} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold ${path===`/${href}`?'bg-blue-600 text-white':'text-slate-300 hover:bg-white/10 hover:text-white'}`}><Icon className="h-4 w-4"/>{label}</Link>)}</nav><button onClick={logout} className="mt-auto flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold text-slate-300 hover:bg-rose-500/20 hover:text-rose-200"><LogOut className="h-4 w-4"/>Secure logout</button></aside>{open&&<div className="fixed inset-0 z-40 bg-slate-950/40 md:hidden" onClick={()=>setOpen(false)}/>}<div className="min-w-0 flex-1"><header className="sticky top-0 z-30 flex items-center justify-between border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur sm:px-7"><button className="rounded-lg p-2 text-slate-700 md:hidden" onClick={()=>setOpen(true)}><Menu className="h-5 w-5"/></button><div className="hidden text-xs font-bold text-emerald-700 sm:flex sm:items-center sm:gap-2"><span className="h-2 w-2 rounded-full bg-emerald-500"/>Online · secure demo workspace</div><div className="ml-auto flex items-center gap-2"><select aria-label="Language" value={language} onChange={e=>setLanguage(e.target.value)} className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs font-bold"><option>English</option><option>Hindi</option><option>Gujarati</option><option>Marathi</option><option>Bengali</option><option>Tamil</option><option>Telugu</option><option>Kannada</option><option>Malayalam</option><option>Punjabi</option></select><Link href="/notifications" className="rounded-lg border border-slate-200 p-2 text-slate-600"><Bell className="h-4 w-4"/></Link><span className="hidden rounded-lg bg-blue-600 px-2.5 py-1.5 text-xs font-black text-white sm:block">{roleLabels[role]}</span></div></header><main className="p-4 sm:p-7">{children}</main></div></div>
 }

@@ -330,7 +330,10 @@ const cartoonGuidanceVideos: GuidanceVideo[] = [
   }
 ];
 
+import { useTranslation } from '@/lib/i18n/use-translation';
+
 export function HealthGuidanceVideos() {
+  const { t } = useTranslation();
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedVideo, setSelectedVideo] = useState<GuidanceVideo | null>(null);

@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase/client';
 import { useSettings } from '@/lib/context/settings-context';
 import { useTranslation } from '@/lib/i18n/use-translation';
 import { OfflineStatusBar } from '@/components/offline-status-bar';
+import { languageOptions, type SupportedLanguage } from '@/lib/i18n/translations';
 import { 
   Sun, 
   Moon, 
@@ -68,11 +69,16 @@ export function DashboardHeader() {
     setTheme(theme === 'dark' ? 'light' : 'dark');
   };
 
+  const cycleLanguages: SupportedLanguage[] = ['en', 'gu', 'hi', 'mr', 'bn', 'ta', 'te', 'kn', 'ml', 'pa', 'or'];
+
   const toggleLanguage = () => {
-    setLanguage(language === 'en' ? 'hi' : 'en');
+    const currentIndex = cycleLanguages.indexOf(language);
+    const nextLanguage = cycleLanguages[(currentIndex + 1) % cycleLanguages.length];
+    setLanguage(nextLanguage);
   };
 
   const initials = userInfo.name ? userInfo.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'DR';
+  const currentLangObj = languageOptions.find(o => o.code === language) || languageOptions[0];
 
   return (
     <div className="w-full bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 transition-colors">
@@ -90,15 +96,22 @@ export function DashboardHeader() {
 
         {/* Action Controls & User Dropdown */}
         <div className="flex items-center gap-3">
-          {/* Quick Language Toggle */}
-          <button
-            onClick={toggleLanguage}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 text-xs font-extrabold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition"
-            title="Switch Language"
-          >
-            <Globe className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
-            <span>{language === 'en' ? 'हिन्दी' : 'EN'}</span>
-          </button>
+          {/* Quick Language Selection Dropdown */}
+          <div className="relative inline-flex items-center gap-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-2 py-1 text-xs font-extrabold text-slate-700 dark:text-slate-200">
+            <Globe className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+            <select
+              value={language}
+              onChange={(e) => setLanguage(e.target.value as SupportedLanguage)}
+              className="bg-transparent text-xs font-bold text-slate-800 dark:text-slate-100 outline-none cursor-pointer pr-1"
+              title="Select Interface Language"
+            >
+              {languageOptions.map(option => (
+                <option value={option.code} key={option.code} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
 
           {/* Quick Theme Toggle */}
           <button

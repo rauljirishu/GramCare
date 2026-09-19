@@ -4,24 +4,27 @@ import { useEffect, useState } from 'react';
 import { DashboardShell } from './dashboard-shell';
 import { supabase } from '@/lib/supabase/client';
 import { currentRole } from '@/lib/auth';
+import { useTranslation } from '@/lib/i18n/use-translation';
 import { CalendarDays, CheckCircle2, ClipboardList, HeartPulse, MapPin, Mic, Pause, Play, Plus, Search, ShieldCheck, RotateCcw, WifiOff } from 'lucide-react';
 
 type RequestRow = { id: string; request_type: string; title: string; details: string; priority: string; status: string; created_at: string; facilities?: { name: string } | null };
 type WorkerRow = { id: string; name: string; role: string; email: string | null; phone: string | null; facilities?: { name: string } | null };
 type Guide = { title: string; scenes: { heading: string; caption: string; color: string }[] };
-const titles: Record<string, { title: string; subtitle: string; icon: typeof ClipboardList; requestType: string }> = {
-  'maternal-care': { title: 'Maternal Care', subtitle: 'Pregnancy milestones, nutrition guidance and field-worker reminders.', icon: HeartPulse, requestType: 'other' },
-  'health-camps': { title: 'Health Camps', subtitle: 'Request and track awareness, nutrition, sanitation and professional training camps.', icon: CalendarDays, requestType: 'health_camp' },
-  outbreaks: { title: 'Outbreak Monitoring', subtitle: 'Report flu, dengue, malaria and other area situations for coordinated support.', icon: ClipboardList, requestType: 'outbreak_support' },
-  resources: { title: 'Resource Requests', subtitle: 'Request medicines, equipment, kits and staffing support from central authority.', icon: ClipboardList, requestType: 'medicine' },
-  workers: { title: 'Worker Management', subtitle: 'Coordinate authorised field healthcare teams and facility staff.', icon: HeartPulse, requestType: 'staffing' },
-  'health-education': { title: 'Health Education', subtitle: 'Short, mobile-friendly guidance that can be watched when a physical camp is missed.', icon: HeartPulse, requestType: 'other' },
-  reports: { title: 'Reports', subtitle: 'Privacy-conscious aggregate reporting for authorised planning.', icon: ClipboardList, requestType: 'other' },
-  map: { title: 'Nearby Healthcare Map', subtitle: 'Use device location or manual search to find PHCs, hospitals and camps.', icon: MapPin, requestType: 'other' },
+const titles: Record<string, { titleKey: string; title: string; subtitle: string; icon: typeof ClipboardList; requestType: string }> = {
+  'maternal-care': { titleKey: 'navMaternalChildCare', title: 'Maternal Care', subtitle: 'Pregnancy milestones, nutrition guidance and field-worker reminders.', icon: HeartPulse, requestType: 'other' },
+  'health-camps': { titleKey: 'navHealthCamps', title: 'Health Camps', subtitle: 'Request and track awareness, nutrition, sanitation and professional training camps.', icon: CalendarDays, requestType: 'health_camp' },
+  outbreaks: { titleKey: 'navAreaOutbreaks', title: 'Outbreak Monitoring', subtitle: 'Report flu, dengue, malaria and other area situations for coordinated support.', icon: ClipboardList, requestType: 'outbreak_support' },
+  resources: { titleKey: 'navEquipmentDemands', title: 'Resource Requests', subtitle: 'Request medicines, equipment, kits and staffing support from central authority.', icon: ClipboardList, requestType: 'medicine' },
+  workers: { titleKey: 'workers', title: 'Worker Management', subtitle: 'Coordinate authorised field healthcare teams and facility staff.', icon: HeartPulse, requestType: 'staffing' },
+  'health-education': { titleKey: 'navCartoonGuidance', title: 'Health Education', subtitle: 'Short, mobile-friendly guidance that can be watched when a physical camp is missed.', icon: HeartPulse, requestType: 'other' },
+  reports: { titleKey: 'reports', title: 'Reports', subtitle: 'Privacy-conscious aggregate reporting for authorised planning.', icon: ClipboardList, requestType: 'other' },
+  map: { titleKey: 'navNearbyDoctors', title: 'Nearby Healthcare Map', subtitle: 'Use device location or manual search to find PHCs, hospitals and camps.', icon: MapPin, requestType: 'other' },
 };
 
 export function ModulePage({ module }: { module: string }) {
-  const data = titles[module] || titles['health-education'];
+  const { t } = useTranslation();
+  const rawData = titles[module] || titles['health-education'];
+  const data = { ...rawData, title: t(rawData.titleKey, rawData.title) };
   const Icon = data.icon;
   const [rows, setRows] = useState<RequestRow[]>([]);
   const [workers, setWorkers] = useState<WorkerRow[]>([]);

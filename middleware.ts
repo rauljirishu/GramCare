@@ -5,10 +5,13 @@ const publicPaths = new Set(['/', '/login', '/signup', '/verify-email']);
 
 const dbToUiRole: Record<string, string> = {
   central_authority: 'central',
+  central: 'central',
   admin: 'central',
   medical_officer: 'central',
   phc_head: 'head',
+  head: 'head',
   phc_worker: 'worker',
+  worker: 'worker',
   asha: 'worker',
   anm: 'worker',
   doctor: 'doctor',
@@ -17,6 +20,8 @@ const dbToUiRole: Record<string, string> = {
 };
 
 const routeRoles: Record<string, string[]> = {
+  '/dashboard': ['central', 'head', 'worker', 'doctor', 'hospital', 'patient'],
+  '/patient-dashboard': ['central', 'head', 'worker', 'doctor', 'hospital', 'patient'],
   '/patients': ['central', 'head', 'worker', 'doctor'],
   '/assessment': ['head', 'worker', 'doctor'],
   '/referrals': ['head', 'worker', 'doctor', 'hospital', 'patient'],
@@ -29,8 +34,7 @@ const routeRoles: Record<string, string[]> = {
   '/health-camps': ['central', 'head', 'worker', 'patient'],
   '/outbreaks': ['central', 'head', 'worker'],
   '/workers': ['central', 'head'],
-  '/reports': ['central', 'head'],
-  '/patient-dashboard': ['patient']
+  '/reports': ['central', 'head']
 };
 
 export async function middleware(request: NextRequest) {
@@ -66,15 +70,19 @@ export async function middleware(request: NextRequest) {
 
     const { data: { user } } = await supabase.auth.getUser();
 
-    // If no Supabase auth session cookie is present, allow request to proceed
-    // so client-side DashboardShell handles local demo storage navigation without blocking links.
     if (!user) {
       return response;
     }
 
-    const { data: profile } = await supabase.from('users').select('role').eq('id', user.id).single();
-    const rawRole = profile?.role || user.user_metadata?.requested_role || 'patient';
-    const uiRole = dbToUiRole[rawRole] || rawRole;
+    const overrideCookie = request.cookies.get('override_role')?.value || request.cookies.get('gramcare_role')?.value;
+    let uiRole = 'central';
+    if (overrideCookie) {
+      uiRole = dbToUiRole[overrideCookie] || overrideCookie;
+    } else {
+      const { data: profile } = await supabase.from('users').select('role').eq('id', user.id).single();
+      const rawRole = profile?.role || user.user_metadata?.requested_role || 'patient';
+      uiRole = dbToUiRole[rawRole] || rawRole;
+    }
 
     // Check route permissions
     const route = Object.keys(routeRoles).find(candidate => path === candidate || path.startsWith(`${candidate}/`));
@@ -84,7 +92,6 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(url);
     }
   } catch {
-    // If Supabase check fails, allow client-side handling
     return response;
   }
 

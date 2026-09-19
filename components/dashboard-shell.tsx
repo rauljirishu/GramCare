@@ -7,6 +7,7 @@ import { GramRole, roleLabels } from '@/lib/grams-data';
 import { currentRole } from '@/lib/auth';
 import { languageOptions } from '@/lib/i18n/translations';
 import { useSettings } from '@/lib/context/settings-context';
+import { useTranslation } from '@/lib/i18n/use-translation';
 import { Bell, BookOpen, CalendarDays, ClipboardList, FileText, HeartPulse, LayoutDashboard, LogOut, Map, Menu, ShieldCheck, Users, Wifi, X } from 'lucide-react';
 import { syncEngine } from '@/lib/offline/sync-engine';
 
@@ -16,47 +17,47 @@ type NavItem = {
   icon: any;
 };
 
-function getRoleNav(role: GramRole): NavItem[] {
+function getRoleNav(role: GramRole, t: (key: string, fallback?: string) => string): NavItem[] {
   switch (role) {
     case 'central':
       return [
-        { href: 'dashboard', label: 'Central Authority Dashboard', icon: LayoutDashboard },
-        { href: 'patients', label: 'All Patient Data', icon: Users },
-        { href: 'resources', label: 'Equipment & Resource Demands', icon: ClipboardList },
-        { href: 'feedback', label: 'Feedback Section', icon: FileText },
-        { href: 'complaints', label: 'Complaint Box', icon: Bell },
-        { href: 'map', label: 'Area & PHC Locations', icon: Map }
+        { href: 'dashboard', label: t('navCentralDashboard', 'Central Authority Dashboard'), icon: LayoutDashboard },
+        { href: 'patients', label: t('navAllPatientData', 'All Patient Data'), icon: Users },
+        { href: 'resources', label: t('navEquipmentDemands', 'Equipment & Resource Demands'), icon: ClipboardList },
+        { href: 'feedback', label: t('navFeedbackSection', 'Feedback Section'), icon: FileText },
+        { href: 'complaints', label: t('navComplaintBox', 'Complaint Box'), icon: Bell },
+        { href: 'map', label: t('navAreaLocations', 'Area & PHC Locations'), icon: Map }
       ];
     case 'head':
       return [
-        { href: 'dashboard', label: 'Area PHC Dashboard', icon: LayoutDashboard },
-        { href: 'patients', label: 'Area Patients & Doctors', icon: Users },
-        { href: 'resources', label: 'Demand Resources', icon: ClipboardList },
-        { href: 'outbreaks', label: 'Area Outbreaks & Camps', icon: HeartPulse }
+        { href: 'dashboard', label: t('navAreaDashboard', 'Area PHC Dashboard'), icon: LayoutDashboard },
+        { href: 'patients', label: t('navAreaPatientsDoctors', 'Area Patients & Doctors'), icon: Users },
+        { href: 'resources', label: t('navDemandResources', 'Demand Resources'), icon: ClipboardList },
+        { href: 'outbreaks', label: t('navAreaOutbreaks', 'Area Outbreaks & Camps'), icon: HeartPulse }
       ];
     case 'worker':
       return [
-        { href: 'dashboard', label: 'PHC Care Dashboard', icon: LayoutDashboard },
-        { href: 'patients', label: 'Register & Patients', icon: Users },
-        { href: 'assessment', label: 'Risk Screening', icon: HeartPulse },
-        { href: 'follow-ups', label: 'Follow-ups & Treatment', icon: CalendarDays },
-        { href: 'maternal-care', label: 'Maternal & Child Care', icon: BookOpen }
+        { href: 'dashboard', label: t('navPhcCareDashboard', 'PHC Care Dashboard'), icon: LayoutDashboard },
+        { href: 'patients', label: t('navRegisterPatients', 'Register & Patients'), icon: Users },
+        { href: 'assessment', label: t('navRiskScreening', 'Risk Screening'), icon: HeartPulse },
+        { href: 'follow-ups', label: t('navFollowUpsTreatment', 'Follow-ups & Treatment'), icon: CalendarDays },
+        { href: 'maternal-care', label: t('navMaternalChildCare', 'Maternal & Child Care'), icon: BookOpen }
       ];
     case 'patient':
       return [
-        { href: 'patient-dashboard', label: 'My Health Dashboard', icon: LayoutDashboard },
-        { href: 'map', label: 'Nearby Doctors & PHCs', icon: Map },
-        { href: 'health-education', label: 'Cartoon Guidance Videos', icon: BookOpen },
-        { href: 'referrals', label: 'Care Appointments', icon: CalendarDays },
-        { href: 'complaints', label: 'Complaint Box', icon: Bell },
-        { href: 'feedback', label: 'Feedback Section', icon: FileText }
+        { href: 'patient-dashboard', label: t('navMyHealthDashboard', 'My Health Dashboard'), icon: LayoutDashboard },
+        { href: 'map', label: t('navNearbyDoctors', 'Nearby Doctors & PHCs'), icon: Map },
+        { href: 'health-education', label: t('navCartoonGuidance', 'Cartoon Guidance Videos'), icon: BookOpen },
+        { href: 'referrals', label: t('navCareAppointments', 'Care Appointments'), icon: CalendarDays },
+        { href: 'complaints', label: t('navComplaintBox', 'Complaint Box'), icon: Bell },
+        { href: 'feedback', label: t('navFeedbackSection', 'Feedback Section'), icon: FileText }
       ];
     default:
       return [
-        { href: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-        { href: 'patients', label: 'Patients', icon: Users },
-        { href: 'referrals', label: 'Referrals', icon: ClipboardList },
-        { href: 'health-education', label: 'Health Guidance', icon: BookOpen }
+        { href: 'dashboard', label: t('navDashboard', 'Dashboard'), icon: LayoutDashboard },
+        { href: 'patients', label: t('navPatients', 'Patients'), icon: Users },
+        { href: 'referrals', label: t('navReferrals', 'Referrals'), icon: ClipboardList },
+        { href: 'health-education', label: t('navCartoonGuidance', 'Health Guidance'), icon: BookOpen }
       ];
   }
 }
@@ -65,6 +66,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   const router = useRouter();
   const { language, setLanguage } = useSettings();
+  const { t } = useTranslation();
   const [role, setRole] = useState<GramRole>('central');
   const [open, setOpen] = useState(false);
   const [online, setOnline] = useState(true);
@@ -87,7 +89,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     return syncEngine.subscribe((state, count) => { setOnline(state); setPending(count); });
   }, [router]);
 
-  const nav = getRoleNav(role);
+  const nav = getRoleNav(role, t);
 
   async function logout() {
     if (typeof window !== 'undefined') {
@@ -113,14 +115,14 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           <span className="grid h-10 w-10 place-items-center rounded-xl bg-blue-600 text-2xl text-white">+</span>
           <span>Gram<span className="text-blue-400">Care</span></span>
         </Link>
-        <p className="mt-2 text-xs font-semibold text-slate-400">Connected Healthcare for Rural Communities</p>
+        <p className="mt-2 text-xs font-semibold text-slate-400">{t('connectedHealthcareTag', 'Connected Healthcare for Rural Communities')}</p>
         
         <div className="mt-6 rounded-xl border border-slate-700 bg-slate-900 p-3 text-xs">
           <span className="flex items-center gap-2 font-bold text-blue-200">
             <ShieldCheck className="h-4 w-4 text-blue-400" />
             {roleLabels[role] || 'Authorised User'}
           </span>
-          <span className="mt-1 block text-slate-400">Role-aware limited workspace</span>
+          <span className="mt-1 block text-slate-400">{t('roleWorkspace', 'Role-aware limited workspace')}</span>
         </div>
 
         <nav className="mt-6 space-y-1.5 overflow-y-auto flex-1">
@@ -149,7 +151,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           className="mt-4 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold text-slate-300 hover:bg-rose-500/20 hover:text-rose-200 transition-colors"
         >
           <LogOut className="h-4 w-4" />
-          <span>Secure logout</span>
+          <span>{t('secureLogout', 'Secure logout')}</span>
         </button>
       </aside>
 
@@ -174,8 +176,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
           <div className={`hidden items-center gap-2 text-xs font-bold sm:flex ${online ? 'text-emerald-700' : 'text-amber-700'}`}>
             <Wifi className="h-4 w-4" />
-            {online ? 'Online' : 'Offline'}
-            {pending ? ` · Pending sync: ${pending}` : ' · All records synchronized'}
+            {online ? t('online', 'Online') : t('offline', 'Offline')}
+            {pending ? ` · Pending sync: ${pending}` : ` · ${t('allSynced', 'All records synchronized')}`}
           </div>
 
           <div className="ml-auto flex items-center gap-2">
@@ -211,6 +213,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                 };
                 const dbRole = dbRoleMap[newRole] || 'central_authority';
                 if (typeof window !== 'undefined') {
+                  document.cookie = `override_role=${newRole}; path=/; max-age=31536000`;
+                  document.cookie = `gramcare_role=${dbRole}; path=/; max-age=31536000`;
                   localStorage.setItem('override_role', newRole);
                   localStorage.setItem('gramcare_role', dbRole);
                   localStorage.setItem('demo_role', dbRole);

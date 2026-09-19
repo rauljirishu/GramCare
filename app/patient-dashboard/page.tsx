@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { DashboardShell } from '@/components/dashboard-shell';
 import { supabase } from '@/lib/supabase/client';
+import { useTranslation } from '@/lib/i18n/use-translation';
 import { 
   HeartPulse, 
   MapPin, 
@@ -31,6 +32,7 @@ type Appointment = {
 };
 
 export default function PatientDashboard() {
+  const { t } = useTranslation();
   const [patientRecord, setPatientRecord] = useState<any>(null);
   const [phcFacility, setPhcFacility] = useState<any>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);

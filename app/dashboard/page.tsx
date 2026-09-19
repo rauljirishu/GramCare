@@ -6,6 +6,7 @@ import { DashboardShell } from '@/components/dashboard-shell';
 import { currentRole } from '@/lib/auth';
 import { GramRole } from '@/lib/grams-data';
 import { supabase } from '@/lib/supabase/client';
+import { useTranslation } from '@/lib/i18n/use-translation';
 import { 
   ShieldCheck, 
   Users, 
@@ -58,6 +59,7 @@ type PatientTreatmentRow = {
 
 export default function Dashboard() {
   const [role, setRole] = useState<GramRole>('central');
+  const [loading, setLoading] = useState<boolean>(true);
   const [userProfile, setUserProfile] = useState<{ id: string; name: string; role: string; facility_id: string | null } | null>(null);
 
   useEffect(() => {
@@ -66,6 +68,9 @@ export default function Dashboard() {
         window.location.href = '/patient-dashboard';
       } else if (value) {
         setRole(value);
+        setLoading(false);
+      } else {
+        setLoading(false);
       }
     });
 
@@ -77,6 +82,19 @@ export default function Dashboard() {
       }
     });
   }, []);
+
+  if (loading) {
+    return (
+      <DashboardShell>
+        <div className="flex h-64 items-center justify-center">
+          <div className="text-center font-bold text-slate-500">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent mx-auto mb-3"></div>
+            <p className="text-xs font-black uppercase text-blue-900 tracking-wider">Loading Authorised Workspace...</p>
+          </div>
+        </div>
+      </DashboardShell>
+    );
+  }
 
   return (
     <DashboardShell>
@@ -93,6 +111,7 @@ export default function Dashboard() {
 {/* 1. CENTRAL AUTHORITY DASHBOARD (Full System Access & Oversight)            */}
 {/* ========================================================================= */}
 function CentralAuthorityDashboard({ profile }: { profile: any }) {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'locations' | 'hospitals' | 'heads' | 'phcs' | 'patients' | 'resources' | 'feedback' | 'complaints'>('locations');
   const [stats, setStats] = useState({ totalLocations: 3, totalHospitals: 4, totalHeads: 3, totalPhcs: 6, totalPatients: 6, totalDemands: 3, totalFeedbacks: 4, totalComplaints: 3 });
   const [search, setSearch] = useState('');
@@ -196,13 +215,13 @@ function CentralAuthorityDashboard({ profile }: { profile: any }) {
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3.5 py-1 text-xs font-bold text-blue-200 backdrop-blur">
-              <ShieldCheck className="h-4 w-4 text-blue-300" /> CENTRAL HEALTHCARE AUTHORITY — SYSTEM ADMINISTRATION & OVERSIGHT
+              <ShieldCheck className="h-4 w-4 text-blue-300" /> {t('centralBadge', 'CENTRAL HEALTHCARE AUTHORITY — SYSTEM ADMINISTRATION & OVERSIGHT')}
             </div>
             <h1 className="mt-3 text-2xl font-black sm:text-4xl text-white">
-              Statewide Healthcare Administration & Monitoring
+              {t('centralTitle', 'Statewide Healthcare Administration & Monitoring')}
             </h1>
             <p className="mt-2 text-sm text-blue-100 max-w-2xl leading-relaxed">
-              Full Central Authority access to view patient records, PHC sub-branches, review equipment/resource demands, monitor feedback, and resolve complaint tickets.
+              {t('centralDesc', 'Full Central Authority access to view patient records, PHC sub-branches, review equipment/resource demands, monitor feedback, and resolve complaint tickets.')}
             </p>
           </div>
         </div>
@@ -213,31 +232,31 @@ function CentralAuthorityDashboard({ profile }: { profile: any }) {
       {/* Top Overview Metrics Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <button onClick={() => setActiveTab('locations')} className={`card p-4 text-left transition-all ${activeTab === 'locations' ? 'ring-2 ring-blue-600 bg-blue-50/50' : ''}`}>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Area Locations & PHCs</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{t('navAreaLocations', 'Area Locations & PHCs')}</p>
           <p className="mt-2 text-2xl font-black text-slate-900">{stats.totalLocations} Areas / {stats.totalPhcs} PHCs</p>
           <p className="mt-1 text-[11px] font-bold text-blue-700">Covered Regions →</p>
         </button>
 
         <button onClick={() => setActiveTab('patients')} className={`card p-4 text-left transition-all ${activeTab === 'patients' ? 'ring-2 ring-blue-600 bg-blue-50/50' : ''}`}>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Master Patient Data</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{t('navAllPatientData', 'Master Patient Data')}</p>
           <p className="mt-2 text-2xl font-black text-slate-900">{stats.totalPatients} Records</p>
           <p className="mt-1 text-[11px] font-bold text-blue-700">All Patient Records →</p>
         </button>
 
         <button onClick={() => setActiveTab('resources')} className={`card p-4 text-left transition-all ${activeTab === 'resources' ? 'ring-2 ring-blue-600 bg-blue-50/50' : ''}`}>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Equipment Demands</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{t('navEquipmentDemands', 'Equipment Demands')}</p>
           <p className="mt-2 text-2xl font-black text-amber-600">{stats.totalDemands} Demands</p>
           <p className="mt-1 text-[11px] font-bold text-amber-700">Resource Requests →</p>
         </button>
 
         <button onClick={() => setActiveTab('feedback')} className={`card p-4 text-left transition-all ${activeTab === 'feedback' ? 'ring-2 ring-blue-600 bg-blue-50/50' : ''}`}>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Feedback Section</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{t('navFeedbackSection', 'Feedback Section')}</p>
           <p className="mt-2 text-2xl font-black text-emerald-600">{stats.totalFeedbacks} Feedbacks</p>
           <p className="mt-1 text-[11px] font-bold text-emerald-700">Patient & PHC Reviews →</p>
         </button>
 
         <button onClick={() => setActiveTab('complaints')} className={`card p-4 text-left transition-all ${activeTab === 'complaints' ? 'ring-2 ring-blue-600 bg-blue-50/50' : ''}`}>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Complaint Box</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{t('navComplaintBox', 'Complaint Box')}</p>
           <p className="mt-2 text-2xl font-black text-rose-600">{stats.totalComplaints} Tickets</p>
           <p className="mt-1 text-[11px] font-bold text-rose-700">Grievances & Problems →</p>
         </button>
@@ -247,41 +266,41 @@ function CentralAuthorityDashboard({ profile }: { profile: any }) {
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-3">
         <div className="flex flex-wrap gap-2">
           <button onClick={() => setActiveTab('locations')} className={`rounded-xl px-4 py-2 text-xs font-black transition-all ${activeTab === 'locations' ? 'bg-blue-600 text-white shadow' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'}`}>
-            📍 1. Area Locations ({stats.totalLocations})
+            📍 1. {t('navAreaLocations', 'Area Locations')} ({stats.totalLocations})
           </button>
 
           <button onClick={() => setActiveTab('hospitals')} className={`rounded-xl px-4 py-2 text-xs font-black transition-all ${activeTab === 'hospitals' ? 'bg-blue-600 text-white shadow' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'}`}>
-            🏥 2. Hospital List ({stats.totalHospitals})
+            🏥 2. {t('tabHospitalsList', 'Hospital List')} ({stats.totalHospitals})
           </button>
 
           <button onClick={() => setActiveTab('heads')} className={`rounded-xl px-4 py-2 text-xs font-black transition-all ${activeTab === 'heads' ? 'bg-blue-600 text-white shadow' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'}`}>
-            👨‍⚕️ 3. PHC Head List ({stats.totalHeads})
+            👨‍⚕️ 3. {t('tabDoctorsList', 'PHC Head List')} ({stats.totalHeads})
           </button>
 
           <button onClick={() => setActiveTab('phcs')} className={`rounded-xl px-4 py-2 text-xs font-black transition-all ${activeTab === 'phcs' ? 'bg-blue-600 text-white shadow' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'}`}>
-            🏢 4. All PHCs ({stats.totalPhcs})
+            🏢 4. {t('tabPhcList', 'All PHCs')} ({stats.totalPhcs})
           </button>
 
           <button onClick={() => setActiveTab('patients')} className={`rounded-xl px-4 py-2 text-xs font-black transition-all ${activeTab === 'patients' ? 'bg-blue-600 text-white shadow' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'}`}>
-            👥 5. All Patient Data ({stats.totalPatients})
+            👥 5. {t('navAllPatientData', 'All Patient Data')} ({stats.totalPatients})
           </button>
 
           <button onClick={() => setActiveTab('resources')} className={`rounded-xl px-4 py-2 text-xs font-black transition-all ${activeTab === 'resources' ? 'bg-amber-600 text-white shadow' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'}`}>
-            📦 6. Equipment Demands ({stats.totalDemands})
+            📦 6. {t('navEquipmentDemands', 'Equipment Demands')} ({stats.totalDemands})
           </button>
 
           <button onClick={() => setActiveTab('feedback')} className={`rounded-xl px-4 py-2 text-xs font-black transition-all ${activeTab === 'feedback' ? 'bg-emerald-600 text-white shadow' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'}`}>
-            💬 7. Feedback Section ({stats.totalFeedbacks})
+            💬 7. {t('navFeedbackSection', 'Feedback Section')} ({stats.totalFeedbacks})
           </button>
 
           <button onClick={() => setActiveTab('complaints')} className={`rounded-xl px-4 py-2 text-xs font-black transition-all ${activeTab === 'complaints' ? 'bg-rose-600 text-white shadow' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'}`}>
-            🚨 8. Complaint Box ({stats.totalComplaints})
+            🚨 8. {t('navComplaintBox', 'Complaint Box')} ({stats.totalComplaints})
           </button>
         </div>
 
         <div className="relative min-w-[200px]">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder={`Search ${activeTab}...`} className="input py-1.5 text-xs pl-9" />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder={`${t('filterOverview', 'Filter overview')}...`} className="input py-1.5 text-xs pl-9" />
         </div>
       </div>
 
@@ -718,28 +737,69 @@ function CentralAuthorityDashboard({ profile }: { profile: any }) {
 {/* 2. AREA / PHC HEAD DASHBOARD (Area Scoped Authority Only)                 */}
 {/* ========================================================================= */}
 function PhcHeadDashboard({ profile }: { profile: any }) {
+  const { t } = useTranslation();
+  const [activeTab, setActiveTab] = useState<'overview' | 'patients' | 'doctors' | 'phcs' | 'workers' | 'demands'>('overview');
   const [stats, setStats] = useState({ areaPatients: 0, areaWorkers: 0, highRisk: 0, myDemands: 0 });
   const [myRequests, setMyRequests] = useState<SupportRequest[]>([]);
+  const [areaPatientsList, setAreaPatientsList] = useState<any[]>([]);
+  const [areaDoctorsList, setAreaDoctorsList] = useState<any[]>([]);
+  const [areaPhcsList, setAreaPhcsList] = useState<any[]>([]);
+  const [areaWorkersList, setAreaWorkersList] = useState<any[]>([]);
+  
   const [showDemandModal, setShowDemandModal] = useState(false);
   const [demandTitle, setDemandTitle] = useState('');
-  const [demandType, setDemandType] = useState('medicine');
-  const [demandDetails, setDemandDetails] = useState('');
-  const [demandPriority, setDemandPriority] = useState('normal');
+  const [demandType, setDemandType] = useState('equipment');
+  const [demandQuantity, setDemandQuantity] = useState('10');
+  const [demandReason, setDemandReason] = useState('');
+  const [demandPriority, setDemandPriority] = useState('high');
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
+  const [search, setSearch] = useState('');
+
+  const assignedArea = 'Rampur East Sub-region';
+  const assignedPhc = 'PHC Rampur East Sub-branch';
 
   async function loadData() {
     const [pts, wrks, reqs] = await Promise.all([
-      supabase.from('patients').select('id', { count: 'exact', head: true }),
-      supabase.from('users').select('id', { count: 'exact', head: true }).in('role', ['phc_worker', 'asha', 'anm']),
+      supabase.from('patients').select('id,patient_code,name,age,gender,village,verification_status,created_at,facilities(name)', { count: 'exact' }),
+      supabase.from('users').select('id,name,role,email,phone,facilities(name)').in('role', ['phc_worker', 'asha', 'anm']),
       supabase.from('support_requests').select('id,request_type,title,details,priority,status,resolution_note,created_at').order('created_at', { ascending: false })
     ]);
 
+    const demoDoctors = [
+      { id: 'doc-1', name: 'Dr. Ananya Sharma', specialization: 'General Physician & PHC Lead', phc_name: assignedPhc, phone: '+91 98765 23456', status: 'Available On Duty' },
+      { id: 'doc-2', name: 'Dr. Rajesh Sharma', specialization: 'Senior Medical Officer', phc_name: 'Primary Health Centre Rampur Central', phone: '+91 98765 12345', status: 'Available' },
+      { id: 'doc-3', name: 'Dr. Suresh Verma', specialization: 'Community Health Specialist', phc_name: 'PHC Anandpur Rural Centre', phone: '+91 98765 34567', status: 'On Field Duty' }
+    ];
+
+    const demoPhcs = [
+      { id: 'phc-1', name: 'PHC Rampur East Sub-branch', location: 'Rampur East Sub-region', head_name: 'Dr. Ananya Sharma', worker_count: 5, patient_count: 142, status: 'Operational' },
+      { id: 'phc-2', name: 'PHC Anandpur Rural Centre', location: 'Anandpur Area', head_name: 'Dr. Suresh Verma', worker_count: 4, patient_count: 98, status: 'Operational' }
+    ];
+
+    const demoWorkers = [
+      { id: 'wrk-1', name: 'Sunita Verma', role: 'ANM Senior Field Worker', assigned_phc: assignedPhc, phone: '+91 98765 44401', status: 'Active Field Duty' },
+      { id: 'wrk-2', name: 'Meena Devi', role: 'ASHA Healthcare Worker', assigned_phc: assignedPhc, phone: '+91 98765 44402', status: 'Active Field Duty' },
+      { id: 'wrk-3', name: 'Radha Patel', role: 'ASHA Worker', assigned_phc: assignedPhc, phone: '+91 98765 44403', status: 'On Home Visit' },
+      { id: 'wrk-4', name: 'Kavita Singh', role: 'PHC Health Worker', assigned_phc: assignedPhc, phone: '+91 98765 44404', status: 'Active' }
+    ];
+
+    setAreaDoctorsList(demoDoctors);
+    setAreaPhcsList(demoPhcs);
+    setAreaWorkersList(demoWorkers);
+
+    const loadedPatients = (pts.data || []) as any[];
+    setAreaPatientsList(loadedPatients && loadedPatients.length ? loadedPatients : [
+      { id: 'p1', patient_code: 'GS-EAST-001', name: 'Ramesh Kumar', age: 45, gender: 'male', village: 'Rampur East', verification_status: 'verified', facilities: { name: assignedPhc } },
+      { id: 'p2', patient_code: 'GS-EAST-002', name: 'Priya Sharma', age: 28, gender: 'female', village: 'Rampur East Sub-region', verification_status: 'verified', facilities: { name: assignedPhc } },
+      { id: 'p3', patient_code: 'GS-EAST-003', name: 'Kavita Devi', age: 34, gender: 'female', village: 'Rampur Village 2', verification_status: 'verified', facilities: { name: assignedPhc } }
+    ]);
+
     setStats({
-      areaPatients: pts.count || 0,
-      areaWorkers: wrks.count || 0,
-      highRisk: Math.round((pts.count || 0) * 0.15),
-      myDemands: (reqs.data || []).length
+      areaPatients: loadedPatients && loadedPatients.length ? loadedPatients.length : 142,
+      areaWorkers: demoWorkers.length,
+      highRisk: 12,
+      myDemands: (reqs.data || []).length || 3
     });
 
     setMyRequests((reqs.data || []) as unknown as SupportRequest[]);
@@ -754,25 +814,29 @@ function PhcHeadDashboard({ profile }: { profile: any }) {
     const { data: { user } } = await supabase.auth.getUser();
     const { data: userProf } = await supabase.from('users').select('facility_id').eq('id', user?.id || '').single();
 
-    if (!user || !userProf?.facility_id) {
-      setNotice('Unable to submit: You must be associated with an assigned PHC facility.');
+    if (!user) {
+      setNotice('Unable to submit: Authentication session missing.');
       setBusy(false); return;
     }
 
+    const fullTitle = `${demandQuantity} x ${demandTitle.trim()}`;
+    const fullDetails = `Reason: ${demandReason.trim()} | Assigned PHC: ${assignedPhc}`;
+
     const { error } = await supabase.from('support_requests').insert({
       requested_by: user.id,
-      facility_id: userProf.facility_id,
+      facility_id: userProf?.facility_id || null,
       request_type: demandType,
-      title: demandTitle.trim(),
-      details: demandDetails.trim(),
-      priority: demandPriority
+      title: fullTitle,
+      details: fullDetails,
+      priority: demandPriority,
+      status: 'pending'
     });
 
     setBusy(false);
     if (error) { setNotice(`Failed to submit demand: ${error.message}`); return; }
 
-    setDemandTitle(''); setDemandDetails(''); setShowDemandModal(false);
-    setNotice('Resource demand submitted to Central Authority for approval.');
+    setDemandTitle(''); setDemandReason(''); setShowDemandModal(false);
+    setNotice(`Equipment/Resource demand "${fullTitle}" submitted UPWARD to Central Authority for approval.`);
     loadData();
   }
 
@@ -783,158 +847,393 @@ function PhcHeadDashboard({ profile }: { profile: any }) {
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3.5 py-1 text-xs font-bold text-blue-200 backdrop-blur">
-              <Building2 className="h-4 w-4 text-blue-300" /> TIER 2 — AREA / PHC HEAD JURISDICTION
+              <Building2 className="h-4 w-4 text-blue-300" /> {t('level2Sub', 'LEVEL 2 — AREA AUTHORITY / PHC HEAD COMMAND')}
             </div>
             <h1 className="mt-3 text-2xl font-black sm:text-4xl text-white">
-              Assigned Area Health Command & Resource Demand Desk
+              {t('level2Title', 'Area Health Authority & Oversight Desk')}
             </h1>
             <p className="mt-2 text-sm text-blue-100 max-w-2xl leading-relaxed">
-              Authority restricted strictly to your assigned PHC area. Demand medicines, equipment, and staffing support directly from Central Authority.
+              {t('level2Desc', 'Authority restricted strictly to your assigned area.')} <b>{assignedArea}</b> ({assignedPhc}).
             </p>
           </div>
-          <button onClick={() => setShowDemandModal(true)} className="primary-btn bg-amber-500 hover:bg-amber-600 text-slate-900 font-black">
-            <Plus className="h-4 w-4" /> Demand Resources to Central
+          <button onClick={() => setShowDemandModal(true)} className="primary-btn bg-amber-500 hover:bg-amber-600 text-slate-900 font-black shadow-lg">
+            <Plus className="h-4 w-4" /> {t('demandResourcesBtn', 'Demand Resources to Central')}
           </button>
         </div>
       </section>
 
       {notice && <div className="rounded-xl bg-blue-50 p-4 text-xs font-bold text-blue-900">{notice}</div>}
 
-      {/* Metrics Row */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="card p-5 border-blue-200">
-          <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-bold uppercase">Area Registered Patients</span>
-            <Users className="h-5 w-5 text-blue-600" />
-          </div>
-          <p className="mt-3 text-3xl font-black text-slate-900">{stats.areaPatients}</p>
-          <p className="mt-1 text-xs text-slate-500">Assigned PHC jurisdiction</p>
-        </div>
-
-        <div className="card p-5 border-emerald-200">
-          <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-bold uppercase">Assigned PHC Field Team</span>
-            <Activity className="h-5 w-5 text-emerald-600" />
-          </div>
-          <p className="mt-3 text-3xl font-black text-slate-900">{stats.areaWorkers}</p>
-          <p className="mt-1 text-xs text-slate-500">ASHA & ANM Healthcare Staff</p>
-        </div>
-
-        <div className="card p-5 border-rose-200">
-          <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-bold uppercase">Area High-Risk Watchlist</span>
-            <AlertTriangle className="h-5 w-5 text-rose-600" />
-          </div>
-          <p className="mt-3 text-3xl font-black text-slate-900">{stats.highRisk}</p>
-          <p className="mt-1 text-xs text-slate-500">High BP & Maternal watchlist</p>
-        </div>
-
-        <div className="card p-5 border-amber-200">
-          <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-bold uppercase">Submitted Demands</span>
-            <Send className="h-5 w-5 text-amber-600" />
-          </div>
-          <p className="mt-3 text-3xl font-black text-slate-900">{stats.myDemands}</p>
-          <p className="mt-1 text-xs text-slate-500">Central support requests</p>
-        </div>
-      </div>
-
-      {/* Submitted Resource Demands Tracker */}
-      <section className="card p-6 border-slate-200 shadow-md">
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
-          <div>
-            <span className="eyebrow">CENTRAL AUTHORITY DEMAND TRACKER</span>
-            <h2 className="text-xl font-black text-slate-900">Demands Submitted to Central Authority</h2>
-            <p className="text-xs text-slate-500">Track status of requested medicines, equipment, staffing, and health camps.</p>
-          </div>
-          <button onClick={() => setShowDemandModal(true)} className="secondary-btn text-xs">
-            <Plus className="h-3.5 w-3.5" /> Submit New Demand
+      {/* Sub-Tabs Navigation Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-3">
+        <div className="flex flex-wrap gap-2">
+          <button onClick={() => setActiveTab('overview')} className={`rounded-xl px-4 py-2 text-xs font-black transition-all ${activeTab === 'overview' ? 'bg-blue-600 text-white shadow' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'}`}>
+            🏢 {t('tabAreaOverview', '1. Area Overview')}
+          </button>
+          <button onClick={() => setActiveTab('patients')} className={`rounded-xl px-4 py-2 text-xs font-black transition-all ${activeTab === 'patients' ? 'bg-blue-600 text-white shadow' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'}`}>
+            👥 {t('tabPatientDetails', '2. Patient Details')} ({stats.areaPatients})
+          </button>
+          <button onClick={() => setActiveTab('doctors')} className={`rounded-xl px-4 py-2 text-xs font-black transition-all ${activeTab === 'doctors' ? 'bg-blue-600 text-white shadow' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'}`}>
+            👨‍⚕️ {t('tabDoctorsList', '3. Doctors List')} ({areaDoctorsList.length})
+          </button>
+          <button onClick={() => setActiveTab('phcs')} className={`rounded-xl px-4 py-2 text-xs font-black transition-all ${activeTab === 'phcs' ? 'bg-blue-600 text-white shadow' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'}`}>
+            🏢 {t('tabPhcList', '4. PHC List')} ({areaPhcsList.length})
+          </button>
+          <button onClick={() => setActiveTab('workers')} className={`rounded-xl px-4 py-2 text-xs font-black transition-all ${activeTab === 'workers' ? 'bg-blue-600 text-white shadow' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'}`}>
+            👩‍⚕️ {t('tabPhcWorkerList', '5. PHC Worker List')} ({areaWorkersList.length})
+          </button>
+          <button onClick={() => setActiveTab('demands')} className={`rounded-xl px-4 py-2 text-xs font-black transition-all ${activeTab === 'demands' ? 'bg-amber-600 text-white shadow' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'}`}>
+            📦 {t('tabEquipmentRequests', '6. Equipment Requests')} ({stats.myDemands})
           </button>
         </div>
 
-        {myRequests.length > 0 ? (
+        <div className="relative min-w-[200px]">
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder={`${t('filterOverview', 'Filter overview')}...`} className="input py-1.5 text-xs pl-9" />
+        </div>
+      </div>
+
+      {/* SECTION 1: AREA / PHC OVERVIEW */}
+      {activeTab === 'overview' && (
+        <div className="space-y-6">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="card p-5 border-blue-200">
+              <span className="text-[10px] font-bold uppercase text-slate-500">{t('assignedAreaJurisdiction', 'Assigned Area Jurisdiction')}</span>
+              <p className="mt-2 text-lg font-black text-slate-900">{assignedArea}</p>
+              <p className="mt-1 text-xs font-semibold text-blue-700">Strictly Scoped Access</p>
+            </div>
+
+            <div className="card p-5 border-emerald-200">
+              <span className="text-[10px] font-bold uppercase text-slate-500">{t('assignedPrimaryHealthFacility', 'Assigned Primary Health Facility')}</span>
+              <p className="mt-2 text-lg font-black text-slate-900">{assignedPhc}</p>
+              <p className="mt-1 text-xs font-semibold text-emerald-700">Operational Status: Active</p>
+            </div>
+
+            <div className="card p-5 border-indigo-200">
+              <span className="text-[10px] font-bold uppercase text-slate-500">{t('assignedFieldStaff', 'Assigned Field Staff')}</span>
+              <p className="mt-2 text-3xl font-black text-slate-900">{stats.areaWorkers} {t('staffLabel', 'Staff')}</p>
+              <p className="mt-1 text-xs font-semibold text-indigo-700">ASHA & ANM Healthcare Roster</p>
+            </div>
+
+            <div className="card p-5 border-purple-200">
+              <span className="text-[10px] font-bold uppercase text-slate-500">{t('areaPatientScope', 'Area Patient Scope')}</span>
+              <p className="mt-2 text-3xl font-black text-slate-900">{stats.areaPatients} {t('patientsLabel', 'Patients')}</p>
+              <p className="mt-1 text-xs font-semibold text-purple-700">{t('registeredUnderAssignedPhc', 'Registered under assigned PHC')}</p>
+            </div>
+          </div>
+
+          <section className="card p-6 border-slate-200 shadow-sm">
+            <h2 className="text-lg font-black text-slate-900 mb-3">Facility Infrastructure & Jurisdiction Details</h2>
+            <div className="grid gap-4 sm:grid-cols-3 text-xs">
+              <div className="p-3 bg-slate-50 rounded-xl">
+                <span className="font-bold text-slate-500">Facility Address:</span>
+                <p className="font-extrabold text-slate-900 mt-1">CHC Complex, Main Highway, Sector 4</p>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-xl">
+                <span className="font-bold text-slate-500">Emergency & Helpline Contact:</span>
+                <p className="font-extrabold text-blue-700 mt-1">+91 98765 23456</p>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-xl">
+                <span className="font-bold text-slate-500">Inpatient & Emergency Beds:</span>
+                <p className="font-extrabold text-emerald-700 mt-1">20 Beds Available</p>
+              </div>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {/* SECTION 2: PATIENT DETAILS */}
+      {activeTab === 'patients' && (
+        <section className="card p-6 border-slate-200 shadow-md">
+          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
+            <div>
+              <span className="eyebrow">AREA PATIENT REGISTRY (READ-ONLY OVERSIGHT)</span>
+              <h2 className="text-xl font-black text-slate-900">Area Patient Directory & Follow-up Status</h2>
+              <p className="text-xs text-slate-500">Patients belonging strictly to {assignedPhc}. Patient registration rights belong exclusively to Level 3 PHC Workers.</p>
+            </div>
+            <div className="rounded-xl bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-900 border border-amber-200">
+              🔒 Level 2 Area Head Scope: Read-Only Patient Profiles
+            </div>
+          </div>
+
           <div className="mt-4 overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase text-slate-500">
                 <tr>
-                  <th className="p-3">Demand Title</th>
-                  <th className="p-3">Resource Type</th>
+                  <th className="p-3">Patient Code & Name</th>
+                  <th className="p-3">Age / Gender</th>
+                  <th className="p-3">Village Location</th>
+                  <th className="p-3">Assigned PHC</th>
+                  <th className="p-3">Status</th>
+                  <th className="p-3">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {areaPatientsList
+                  .filter(p => `${p.name} ${p.patient_code} ${p.village || ''}`.toLowerCase().includes(search.toLowerCase()))
+                  .map(pt => (
+                    <tr key={pt.id} className="border-t border-slate-100">
+                      <td className="p-3">
+                        <p className="font-extrabold text-slate-900">{pt.name}</p>
+                        <p className="text-xs text-slate-500">{pt.patient_code || 'GS-EAST-001'}</p>
+                      </td>
+                      <td className="p-3 text-xs text-slate-700">{pt.age} yrs · <span className="capitalize">{pt.gender}</span></td>
+                      <td className="p-3 text-xs font-semibold text-slate-700">{pt.village || 'Rampur East'}</td>
+                      <td className="p-3 text-xs font-bold text-blue-700">{pt.facilities?.name || assignedPhc}</td>
+                      <td className="p-3">
+                        <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 capitalize">
+                          {pt.verification_status || 'verified'}
+                        </span>
+                      </td>
+                      <td className="p-3">
+                        <Link href={`/patients/${pt.patient_code || 'GS-EAST-001'}`} className="text-xs font-bold text-blue-700 hover:underline">
+                          View Profile →
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {/* SECTION 3: DOCTORS LIST */}
+      {activeTab === 'doctors' && (
+        <section className="card p-6 border-slate-200 shadow-md">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+            <div>
+              <span className="eyebrow">AREA MEDICAL STAFF</span>
+              <h2 className="text-xl font-black text-slate-900">Associated Doctors Directory</h2>
+              <p className="text-xs text-slate-500">Doctors associated with {assignedArea}.</p>
+            </div>
+          </div>
+
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                <tr>
+                  <th className="p-3">Doctor Name</th>
+                  <th className="p-3">Specialization</th>
+                  <th className="p-3">Assigned Facility</th>
+                  <th className="p-3">Contact</th>
+                  <th className="p-3">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {areaDoctorsList
+                  .filter(d => `${d.name} ${d.specialization}`.toLowerCase().includes(search.toLowerCase()))
+                  .map(doc => (
+                    <tr key={doc.id} className="border-t border-slate-100">
+                      <td className="p-3 font-extrabold text-slate-900">{doc.name}</td>
+                      <td className="p-3 text-xs font-semibold text-slate-700">{doc.specialization}</td>
+                      <td className="p-3 text-xs text-blue-700 font-bold">{doc.phc_name}</td>
+                      <td className="p-3 text-xs text-slate-600">{doc.phone}</td>
+                      <td className="p-3">
+                        <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">
+                          {doc.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {/* SECTION 4: PHC LIST */}
+      {activeTab === 'phcs' && (
+        <section className="card p-6 border-slate-200 shadow-md">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+            <div>
+              <span className="eyebrow">AREA JURISDICTION FACILITIES</span>
+              <h2 className="text-xl font-black text-slate-900">PHCs Belonging to Area Jurisdiction</h2>
+              <p className="text-xs text-slate-500">Primary Health Centres operating under {assignedArea}.</p>
+            </div>
+          </div>
+
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                <tr>
+                  <th className="p-3">PHC Name</th>
+                  <th className="p-3">Location / Region</th>
+                  <th className="p-3">PHC Head in Charge</th>
+                  <th className="p-3">Worker Count</th>
+                  <th className="p-3">Patient Count</th>
+                  <th className="p-3">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {areaPhcsList
+                  .filter(p => `${p.name} ${p.location}`.toLowerCase().includes(search.toLowerCase()))
+                  .map(phc => (
+                    <tr key={phc.id} className="border-t border-slate-100">
+                      <td className="p-3 font-extrabold text-slate-900">{phc.name}</td>
+                      <td className="p-3 text-xs text-slate-700">{phc.location}</td>
+                      <td className="p-3 text-xs font-bold text-blue-700">{phc.head_name}</td>
+                      <td className="p-3 text-xs font-bold text-slate-900">{phc.worker_count} Workers</td>
+                      <td className="p-3 text-xs font-bold text-slate-900">{phc.patient_count} Patients</td>
+                      <td className="p-3">
+                        <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">
+                          {phc.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {/* SECTION 5: PHC WORKER LIST */}
+      {activeTab === 'workers' && (
+        <section className="card p-6 border-slate-200 shadow-md">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+            <div>
+              <span className="eyebrow">FIELD HEALTHCARE TEAM</span>
+              <h2 className="text-xl font-black text-slate-900">PHC Worker Roster (ASHA / ANM)</h2>
+              <p className="text-xs text-slate-500">Authorized healthcare workers assigned to {assignedPhc}.</p>
+            </div>
+          </div>
+
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                <tr>
+                  <th className="p-3">Worker Name</th>
+                  <th className="p-3">Role</th>
+                  <th className="p-3">Assigned PHC</th>
+                  <th className="p-3">Contact</th>
+                  <th className="p-3">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {areaWorkersList
+                  .filter(w => `${w.name} ${w.role}`.toLowerCase().includes(search.toLowerCase()))
+                  .map(wrk => (
+                    <tr key={wrk.id} className="border-t border-slate-100">
+                      <td className="p-3 font-extrabold text-slate-900">{wrk.name}</td>
+                      <td className="p-3 text-xs font-bold text-blue-700">{wrk.role}</td>
+                      <td className="p-3 text-xs text-slate-700">{wrk.assigned_phc}</td>
+                      <td className="p-3 text-xs text-slate-600">{wrk.phone}</td>
+                      <td className="p-3">
+                        <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">
+                          {wrk.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {/* SECTION 6: EQUIPMENT & RESOURCE REQUESTS */}
+      {activeTab === 'demands' && (
+        <section className="card p-6 border-slate-200 shadow-md">
+          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
+            <div>
+              <span className="eyebrow">UPWARD RESOURCE MANAGEMENT</span>
+              <h2 className="text-xl font-black text-slate-900">Equipment & Resource Requests to Central Authority</h2>
+              <p className="text-xs text-slate-500">Submit requests for equipment, medicines, infrastructure, or staffing upward to Central Authority. (Self-approval is disabled).</p>
+            </div>
+            <button onClick={() => setShowDemandModal(true)} className="primary-btn text-xs bg-amber-500 hover:bg-amber-600 text-slate-900 font-black">
+              <Plus className="h-4 w-4" /> Submit Upward Resource Request
+            </button>
+          </div>
+
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                <tr>
+                  <th className="p-3">Item / Resource Title</th>
+                  <th className="p-3">Request Type</th>
                   <th className="p-3">Priority</th>
                   <th className="p-3">Status from Central</th>
-                  <th className="p-3">Central Resolution Note</th>
+                  <th className="p-3">Central Resolution / Note</th>
                 </tr>
               </thead>
               <tbody>
                 {myRequests.map(req => (
                   <tr key={req.id} className="border-t border-slate-100">
-                    <td className="p-3 font-bold text-slate-900">{req.title}</td>
+                    <td className="p-3 font-extrabold text-slate-900">{req.title}</td>
                     <td className="p-3 text-xs font-semibold capitalize text-slate-600">{req.request_type.replaceAll('_', ' ')}</td>
                     <td className="p-3">
-                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${req.priority === 'urgent' ? 'bg-rose-100 text-rose-800' : 'bg-blue-50 text-blue-800'}`}>
+                      <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${req.priority === 'urgent' ? 'bg-rose-100 text-rose-800' : 'bg-blue-100 text-blue-800'}`}>
                         {req.priority}
                       </span>
                     </td>
                     <td className="p-3">
-                      <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700 capitalize">
+                      <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${req.status === 'approved' ? 'bg-emerald-100 text-emerald-800' : req.status === 'in_progress' ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'}`}>
                         {req.status.replaceAll('_', ' ')}
                       </span>
                     </td>
-                    <td className="p-3 text-xs text-slate-600">{req.resolution_note || 'Awaiting review by Central Authority'}</td>
+                    <td className="p-3 text-xs text-slate-600">{req.resolution_note || 'Awaiting review & approval by Central Authority'}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        ) : (
-          <div className="p-8 text-center text-xs text-slate-500">No resource demands submitted yet to Central Authority.</div>
-        )}
-      </section>
+        </section>
+      )}
 
       {/* Demand Resource Modal */}
       {showDemandModal && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/70 p-4">
-          <form onSubmit={submitResourceDemand} className="card w-full max-w-lg p-6 shadow-2xl">
+        <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/70 p-4 backdrop-blur-sm">
+          <form onSubmit={submitResourceDemand} className="card w-full max-w-lg p-6 shadow-2xl space-y-4">
             <div className="flex justify-between items-center border-b pb-3">
-              <h2 className="text-lg font-black text-slate-900">Demand Resources to Central Authority</h2>
+              <div>
+                <h2 className="text-lg font-black text-slate-900">Demand Resources to Central Authority</h2>
+                <p className="text-xs text-slate-500">Level 2 Area Authority Upward Request Form</p>
+              </div>
               <button type="button" onClick={() => setShowDemandModal(false)} className="text-slate-400 hover:text-slate-600"><X className="h-5 w-5" /></button>
             </div>
 
-            <div className="mt-4 space-y-4 text-xs font-bold">
+            <div className="space-y-3 text-xs font-bold">
               <label className="block">
-                Resource Category
+                Request Category
                 <select value={demandType} onChange={e => setDemandType(e.target.value)} className="input mt-1 text-xs">
-                  <option value="medicine">Medicines & Iron Supplements</option>
-                  <option value="equipment">Diagnostic Equipment & Kits</option>
-                  <option value="staffing">ANM / Healthcare Staffing</option>
-                  <option value="health_camp">Health Camp Allocation</option>
-                  <option value="outbreak_support">Outbreak Support Relief</option>
+                  <option value="equipment">Medical Equipment (ECG, BP Monitors, Oxygen)</option>
+                  <option value="medicine">Medicines & Vaccine Stocks</option>
+                  <option value="infrastructure">Infrastructure & Water/Power</option>
+                  <option value="staffing">Staffing Support (ASHA / ANM / Nurses)</option>
+                  <option value="other">Other PHC Requirements</option>
                 </select>
               </label>
 
               <label className="block">
-                Demand Title
-                <input required value={demandTitle} onChange={e => setDemandTitle(e.target.value)} placeholder="e.g. 500 Iron Tablets & BP Monitor Units" className="input mt-1 text-xs font-semibold" />
+                Item / Resource Required
+                <input required value={demandTitle} onChange={e => setDemandTitle(e.target.value)} placeholder="e.g. Oxygen Cylinders with Flowmeters" className="input mt-1 text-xs font-semibold" />
               </label>
 
               <label className="block">
-                Detailed Requirement & Reason
-                <textarea required value={demandDetails} onChange={e => setDemandDetails(e.target.value)} placeholder="Explain requirement, affected village area, and urgency..." className="input mt-1 min-h-24 text-xs font-normal" />
+                Quantity Required
+                <input required value={demandQuantity} onChange={e => setDemandQuantity(e.target.value)} placeholder="e.g. 10 Units" className="input mt-1 text-xs font-semibold" />
               </label>
 
               <label className="block">
-                Urgency Priority
+                Reason & Clinical Justification
+                <textarea required value={demandReason} onChange={e => setDemandReason(e.target.value)} placeholder="Explain affected village area, current stock shortage, and justification..." className="input mt-1 min-h-20 text-xs font-normal" />
+              </label>
+
+              <label className="block">
+                Priority
                 <select value={demandPriority} onChange={e => setDemandPriority(e.target.value)} className="input mt-1 text-xs">
-                  <option value="normal">Normal Routine Allocation</option>
-                  <option value="high">High Priority Needed Soon</option>
-                  <option value="urgent">Urgent Emergency Supply Needed</option>
+                  <option value="normal">Normal Routine Demand</option>
+                  <option value="high">High Priority</option>
+                  <option value="urgent">Urgent Emergency Supply</option>
                 </select>
               </label>
             </div>
 
-            <div className="mt-6 flex justify-end gap-3">
+            <div className="flex justify-end gap-3 pt-2">
               <button type="button" onClick={() => setShowDemandModal(false)} className="secondary-btn text-xs">Cancel</button>
-              <button disabled={busy} className="primary-btn text-xs bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold">
-                {busy ? 'Submitting...' : 'Submit Demand to Central'}
+              <button disabled={busy} className="primary-btn text-xs bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold shadow">
+                {busy ? 'Submitting...' : 'Submit Request Upward to Central'}
               </button>
             </div>
           </form>

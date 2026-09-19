@@ -1,3 +1,324 @@
 'use client';
-import Link from 'next/link'; import {useState} from 'react'; import {DashboardShell} from '@/components/dashboard-shell'; import {supabase} from '@/lib/supabase/client'; import {CheckCircle2,HeartPulse,MapPin,ShieldCheck} from 'lucide-react';
-export default function PatientDashboard(){const[message,setMessage]=useState('');async function correction(){setMessage('');const {data:{user}}=await supabase.auth.getUser();const {data:account,error:accountError}=await supabase.from('patient_accounts').select('patient_id').eq('user_id',user?.id||'').single();if(accountError||!account){setMessage('Your verified patient link could not be found.');return}const {error}=await supabase.from('correction_requests').insert({patient_id:account.patient_id,requested_by:user?.id,field_name:'profile_or_clinical_record',original_value:null,requested_value:{request:'Patient requested a PHC review'},reason:'Patient-requested correction'});setMessage(error?error.message:'Correction request submitted to the PHC for review. Your clinical record was not changed.')}return <DashboardShell><p className="eyebrow">My verified health record</p><h1 className="mt-2 text-3xl font-black">Welcome, Patient Demo</h1><p className="mt-2 text-sm text-slate-600">You can view your verified information and request corrections. Clinical details cannot be edited directly.</p><div className="mt-5 flex items-center gap-2 rounded-xl border border-blue-100 bg-blue-50 p-3 text-xs font-semibold text-blue-900"><ShieldCheck className="h-4 w-4"/>Only your own verified patient record is available in this account.</div><div className="mt-6 grid gap-4 md:grid-cols-3"><Link href="/patients/GS-DEMO-001" className="card p-5 hover:border-blue-300"><HeartPulse className="h-6 w-6 text-blue-600"/><h2 className="mt-3 font-black">My health record</h2><p className="mt-1 text-sm text-slate-600">Verified history, tests, medicine and timeline.</p></Link><Link href="/health-education" className="card p-5 hover:border-blue-300"><CheckCircle2 className="h-6 w-6 text-emerald-600"/><h2 className="mt-3 font-black">AI Guidance Videos</h2><p className="mt-1 text-sm text-slate-600">Short educational videos on maternal health, hygiene & nutrition.</p></Link><Link href="/map" className="card p-5 hover:border-blue-300"><MapPin className="h-6 w-6 text-amber-600"/><h2 className="mt-3 font-black">Nearby care</h2><p className="mt-1 text-sm text-slate-600">PHCs, hospitals and health camps.</p></Link></div><section className="card mt-6 p-5"><h2 className="font-black">Request a correction</h2><p className="mt-2 text-sm text-slate-600">A correction request goes to your PHC for review. Your original clinical record remains unchanged until authorised staff approve it.</p><button className="secondary-btn mt-4" onClick={correction}>Request correction</button>{message&&<p className="mt-3 text-sm font-semibold text-blue-800">{message}</p>}</section></DashboardShell>}
+
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { DashboardShell } from '@/components/dashboard-shell';
+import { supabase } from '@/lib/supabase/client';
+import { 
+  HeartPulse, 
+  MapPin, 
+  Phone, 
+  Calendar, 
+  ShieldCheck, 
+  CheckCircle2, 
+  Clock, 
+  Building2, 
+  UserCheck, 
+  Plus, 
+  FileText,
+  X,
+  Tv,
+  Stethoscope
+} from 'lucide-react';
+
+type Appointment = {
+  id: string;
+  appointment_date: string;
+  purpose: string;
+  status: string;
+  clinical_notes: string | null;
+  facility?: { name: string; phone?: string | null } | null;
+};
+
+export default function PatientDashboard() {
+  const [patientRecord, setPatientRecord] = useState<any>(null);
+  const [phcFacility, setPhcFacility] = useState<any>(null);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [showAppointmentModal, setShowAppointmentModal] = useState(false);
+  const [appointmentDate, setAppointmentDate] = useState('');
+  const [appointmentPurpose, setAppointmentPurpose] = useState('General PHC Wellness Checkup');
+  const [notes, setNotes] = useState('');
+  const [message, setMessage] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  async function loadPatientData() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // Get linked patient account
+    const { data: account } = await supabase
+      .from('patient_accounts')
+      .select('patient_id, patients(*, facilities(*))')
+      .eq('user_id', user.id)
+      .single();
+
+    const rawPatient: any = Array.isArray(account?.patients) ? account.patients[0] : account?.patients;
+    if (rawPatient) {
+      setPatientRecord(rawPatient);
+      const rawFac = Array.isArray(rawPatient.facilities) ? rawPatient.facilities[0] : rawPatient.facilities;
+      if (rawFac) setPhcFacility(rawFac);
+    } else {
+      // Fallback demo patient query
+      const { data: demoPatient } = await supabase
+        .from('patients')
+        .select('*, facilities(*)')
+        .eq('is_demo', true)
+        .single();
+
+      if (demoPatient) {
+        setPatientRecord(demoPatient);
+        const rawFac: any = Array.isArray(demoPatient.facilities) ? demoPatient.facilities[0] : demoPatient.facilities;
+        if (rawFac) setPhcFacility(rawFac);
+      }
+    }
+
+    // Default Demo PHC Facility details if missing
+    if (!phcFacility) {
+      const { data: fac } = await supabase.from('facilities').select('*').limit(1).single();
+      if (fac) setPhcFacility(fac);
+    }
+
+    // Load appointments
+    const { data: appts } = await supabase
+      .from('appointments')
+      .select('id,appointment_date,purpose,status,clinical_notes,facilities(name)')
+      .order('appointment_date', { ascending: true });
+
+    if (appts) setAppointments(appts as unknown as Appointment[]);
+  }
+
+  useEffect(() => { loadPatientData(); }, []);
+
+  async function handleBookAppointment(e: React.FormEvent) {
+    e.preventDefault();
+    if (!appointmentDate) { setMessage('Please select a valid date for your appointment.'); return; }
+    setBusy(true); setMessage('');
+
+    const { data: { user } } = await supabase.auth.getUser();
+    const { error } = await supabase.from('appointments').insert({
+      patient_id: patientRecord?.id || 'd0000000-0000-0000-0000-000000000002',
+      facility_id: phcFacility?.id || null,
+      appointment_date: appointmentDate,
+      purpose: appointmentPurpose,
+      clinical_notes: notes.trim() || 'Patient self-scheduled visit',
+      status: 'scheduled'
+    });
+
+    setBusy(false);
+    if (error) {
+      setMessage(`Unable to book appointment: ${error.message}`);
+      return;
+    }
+
+    setAppointmentDate(''); setNotes(''); setShowAppointmentModal(false);
+    setMessage('Appointment request submitted successfully to your PHC.');
+    loadPatientData();
+  }
+
+  return (
+    <DashboardShell>
+      <div className="space-y-6">
+        {/* Patient Welcome Header */}
+        <section className="rounded-3xl bg-gradient-to-r from-purple-800 via-indigo-900 to-slate-900 p-6 text-white sm:p-8 shadow-xl">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3.5 py-1 text-xs font-bold text-purple-200 backdrop-blur">
+                <UserCheck className="h-4 w-4 text-purple-300" /> TIER 4 — PERSONAL PATIENT HEALTH PORTAL
+              </div>
+              <h1 className="mt-3 text-2xl font-black sm:text-4xl text-white">
+                Welcome, {patientRecord?.name || 'Patient'}
+              </h1>
+              <p className="mt-2 text-sm text-purple-100 max-w-2xl leading-relaxed">
+                View your verified health record, check assigned PHC location & doctor contacts, book clinical appointments, and watch animated guidance videos.
+              </p>
+            </div>
+            <button onClick={() => setShowAppointmentModal(true)} className="primary-btn bg-purple-500 hover:bg-purple-600 text-white font-black">
+              <Plus className="h-4 w-4" /> Book PHC Appointment
+            </button>
+          </div>
+        </section>
+
+        {message && <div className="rounded-xl bg-blue-50 p-4 text-xs font-bold text-blue-900">{message}</div>}
+
+        {/* 3 Main Patient Cards */}
+        <div className="grid gap-6 md:grid-cols-3">
+          {/* Card 1: My Health Record */}
+          <Link href={patientRecord ? `/patients/${patientRecord.patient_code || 'GS-DEMO-001'}` : '#'} className="group card p-6 border-blue-200 hover:border-blue-400 hover:shadow-xl transition-all">
+            <div className="grid h-12 w-12 place-items-center rounded-2xl bg-blue-50 text-blue-600 group-hover:scale-110 transition-transform">
+              <HeartPulse className="h-6 w-6" />
+            </div>
+            <h2 className="mt-4 text-lg font-black text-slate-900">My Verified Health Record</h2>
+            <p className="mt-1.5 text-xs text-slate-600 leading-relaxed">
+              {patientRecord ? `${patientRecord.patient_code} · ${patientRecord.age} yrs · ${patientRecord.blood_group || 'B+'}` : 'View your clinical timeline, BP vitals, and test history.'}
+            </p>
+            <span className="inline-flex items-center gap-1 text-xs font-bold text-blue-700 mt-4">
+              View History Timeline →
+            </span>
+          </Link>
+
+          {/* Card 2: Cartoon Guidance Videos */}
+          <Link href="/health-education" className="group card p-6 border-emerald-200 hover:border-emerald-400 hover:shadow-xl transition-all">
+            <div className="grid h-12 w-12 place-items-center rounded-2xl bg-emerald-50 text-emerald-600 group-hover:scale-110 transition-transform">
+              <Tv className="h-6 w-6" />
+            </div>
+            <h2 className="mt-4 text-lg font-black text-slate-900">Cartoon Guidance Videos</h2>
+            <p className="mt-1.5 text-xs text-slate-600 leading-relaxed">
+              Watch fun animated health stories with ASHA Didi on nutrition, pregnancy & hygiene.
+            </p>
+            <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 mt-4">
+              Watch Animated Stories →
+            </span>
+          </Link>
+
+          {/* Card 3: Nearby Care & Map */}
+          <Link href="/map" className="group card p-6 border-amber-200 hover:border-amber-400 hover:shadow-xl transition-all">
+            <div className="grid h-12 w-12 place-items-center rounded-2xl bg-amber-50 text-amber-600 group-hover:scale-110 transition-transform">
+              <MapPin className="h-6 w-6" />
+            </div>
+            <h2 className="mt-4 text-lg font-black text-slate-900">Nearby Care & Hospitals</h2>
+            <p className="mt-1.5 text-xs text-slate-600 leading-relaxed">
+              Find PHCs, hospitals, emergency care centers, and health camps nearby.
+            </p>
+            <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-700 mt-4">
+              Find Nearby PHCs →
+            </span>
+          </Link>
+        </div>
+
+        {/* Assigned PHC Location, Name & Contact Section */}
+        <section className="card p-6 border-slate-200 shadow-md">
+          <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+            <div className="grid h-10 w-10 place-items-center rounded-xl bg-blue-100 text-blue-700">
+              <Building2 className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-xl font-black text-slate-900">My Assigned Primary Health Centre (PHC)</h2>
+              <p className="text-xs text-slate-500">Location, facility details, and direct contact numbers.</p>
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Facility Name</p>
+              <p className="mt-1 text-sm font-black text-slate-900">{phcFacility?.name || 'Demo Primary Health Centre'}</p>
+              <p className="text-xs text-slate-500">{phcFacility?.code || 'PHC-DEMO-001'}</p>
+            </div>
+
+            <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Location Address</p>
+              <p className="mt-1 text-xs font-bold text-slate-800 flex items-center gap-1">
+                <MapPin className="h-3.5 w-3.5 text-rose-600" /> {phcFacility?.address || 'Main Road, Demo Village'}
+              </p>
+              <p className="text-xs text-slate-500">{phcFacility?.district || 'Demo Area District'}</p>
+            </div>
+
+            <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Medical Officer in Charge</p>
+              <p className="mt-1 text-xs font-bold text-slate-800 flex items-center gap-1">
+                <Stethoscope className="h-3.5 w-3.5 text-blue-600" /> Dr. Rajesh Sharma
+              </p>
+              <p className="text-xs text-slate-500">General Medicine & PHC Lead</p>
+            </div>
+
+            <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">PHC Emergency Helpline</p>
+              <p className="mt-1 text-xs font-bold text-slate-800 flex items-center gap-1">
+                <Phone className="h-3.5 w-3.5 text-emerald-600" /> +91 98765 43210
+              </p>
+              <p className="text-xs text-slate-500">Available 24/7 for PHC Care</p>
+            </div>
+          </div>
+        </section>
+
+        {/* Appointment Scheduler Section */}
+        <section className="card p-6 border-slate-200 shadow-md">
+          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
+            <div>
+              <span className="eyebrow">CLINICAL CARE APPOINTMENTS</span>
+              <h2 className="text-xl font-black text-slate-900">Book & Track PHC Doctor Appointments</h2>
+              <p className="text-xs text-slate-500">Schedule your next doctor visit or wellness checkup at your PHC.</p>
+            </div>
+            <button onClick={() => setShowAppointmentModal(true)} className="primary-btn text-xs bg-purple-600 hover:bg-purple-700">
+              <Plus className="h-3.5 w-3.5" /> Schedule New Appointment
+            </button>
+          </div>
+
+          {appointments.length > 0 ? (
+            <div className="mt-4 overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                  <tr>
+                    <th className="p-3">Appointment Date</th>
+                    <th className="p-3">Purpose of Visit</th>
+                    <th className="p-3">Facility</th>
+                    <th className="p-3">Status</th>
+                    <th className="p-3">Notes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {appointments.map(appt => (
+                    <tr key={appt.id} className="border-t border-slate-100">
+                      <td className="p-3 font-bold text-slate-900">{appt.appointment_date}</td>
+                      <td className="p-3 text-xs font-semibold text-slate-800">{appt.purpose}</td>
+                      <td className="p-3 text-xs text-slate-600">{appt.facility?.name || 'Assigned PHC'}</td>
+                      <td className="p-3">
+                        <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700 capitalize">
+                          {appt.status}
+                        </span>
+                      </td>
+                      <td className="p-3 text-xs text-slate-500">{appt.clinical_notes || 'Routine appointment'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="p-8 text-center text-xs text-slate-500">No scheduled appointments yet. Click above to book your first appointment.</div>
+          )}
+        </section>
+
+        {/* Appointment Modal */}
+        {showAppointmentModal && (
+          <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/70 p-4">
+            <form onSubmit={handleBookAppointment} className="card w-full max-w-lg p-6 shadow-2xl">
+              <div className="flex justify-between items-center border-b pb-3">
+                <h2 className="text-lg font-black text-slate-900">Schedule PHC Doctor Appointment</h2>
+                <button type="button" onClick={() => setShowAppointmentModal(false)} className="text-slate-400 hover:text-slate-600"><X className="h-5 w-5" /></button>
+              </div>
+
+              <div className="mt-4 space-y-4 text-xs font-bold">
+                <label className="block">
+                  Preferred Appointment Date
+                  <input required type="date" value={appointmentDate} onChange={e => setAppointmentDate(e.target.value)} className="input mt-1 text-xs font-semibold" />
+                </label>
+
+                <label className="block">
+                  Purpose of Visit
+                  <select value={appointmentPurpose} onChange={e => setAppointmentPurpose(e.target.value)} className="input mt-1 text-xs">
+                    <option value="General PHC Wellness Checkup">General PHC Wellness Checkup</option>
+                    <option value="Maternal & ANC Checkup">Maternal & ANC Checkup</option>
+                    <option value="Medication & Prescription Review">Medication & Prescription Review</option>
+                    <option value="Child Vaccination Session">Child Vaccination Session</option>
+                    <option value="Blood Pressure & Sugar Check">Blood Pressure & Sugar Check</option>
+                  </select>
+                </label>
+
+                <label className="block">
+                  Symptoms or Special Request Notes
+                  <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Describe any current symptoms or reasons for visit..." className="input mt-1 min-h-20 text-xs font-normal" />
+                </label>
+              </div>
+
+              <div className="mt-6 flex justify-end gap-3">
+                <button type="button" onClick={() => setShowAppointmentModal(false)} className="secondary-btn text-xs">Cancel</button>
+                <button disabled={busy} className="primary-btn text-xs bg-purple-600 hover:bg-purple-700 text-white font-bold">
+                  {busy ? 'Booking...' : 'Confirm Appointment'}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+      </div>
+    </DashboardShell>
+  );
+}

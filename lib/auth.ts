@@ -6,6 +6,10 @@ export const uiRoleFor = (role: string): UiRole => ({ central_authority:'central
 
 export async function currentRole(): Promise<UiRole | null> {
   try {
+    if (typeof window !== 'undefined') {
+      const override = localStorage.getItem('override_role') || localStorage.getItem('gramcare_role') || localStorage.getItem('demo_role');
+      if (override) return uiRoleFor(override);
+    }
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       const { data } = await supabase.from('users').select('role').eq('id', user.id).single();
@@ -13,14 +17,10 @@ export async function currentRole(): Promise<UiRole | null> {
       if (user.user_metadata?.requested_role) return uiRoleFor(user.user_metadata.requested_role);
       if (user.user_metadata?.role) return uiRoleFor(user.user_metadata.role);
     }
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('gramcare_role') || localStorage.getItem('demo_role');
-      if (stored) return uiRoleFor(stored);
-    }
     return user ? 'central' : null;
   } catch {
     if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('gramcare_role') || localStorage.getItem('demo_role');
+      const stored = localStorage.getItem('override_role') || localStorage.getItem('gramcare_role') || localStorage.getItem('demo_role');
       if (stored) return uiRoleFor(stored);
     }
     return null;

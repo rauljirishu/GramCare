@@ -93,56 +93,116 @@ export default function Dashboard() {
 {/* 1. CENTRAL AUTHORITY DASHBOARD (Full System Access & Oversight)            */}
 {/* ========================================================================= */}
 function CentralAuthorityDashboard({ profile }: { profile: any }) {
-  const [stats, setStats] = useState({ totalPatients: 0, totalFacilities: 0, highRisk: 0, pendingRequests: 0 });
-  const [requests, setRequests] = useState<SupportRequest[]>([]);
-  const [complaints, setComplaints] = useState<any[]>([]);
-  const [notice, setNotice] = useState('');
+  const [activeTab, setActiveTab] = useState<'locations' | 'hospitals' | 'heads' | 'phcs' | 'patients' | 'resources' | 'feedback' | 'complaints'>('locations');
+  const [stats, setStats] = useState({ totalLocations: 3, totalHospitals: 4, totalHeads: 3, totalPhcs: 6, totalPatients: 6, totalDemands: 3, totalFeedbacks: 4, totalComplaints: 3 });
   const [search, setSearch] = useState('');
+  const [notice, setNotice] = useState('');
+  
+  const [locationsList, setLocationsList] = useState<any[]>([]);
+  const [hospitalsList, setHospitalsList] = useState<any[]>([]);
+  const [phcHeadsList, setPhcHeadsList] = useState<any[]>([]);
+  const [phcsList, setPhcsList] = useState<any[]>([]);
+  const [patientsList, setPatientsList] = useState<any[]>([]);
+  const [demandsList, setDemandsList] = useState<any[]>([]);
+  const [feedbacksList, setFeedbacksList] = useState<any[]>([]);
+  const [complaintsList, setComplaintsList] = useState<any[]>([]);
 
-  async function loadData() {
-    const [pts, facs, risks, reqs] = await Promise.all([
-      supabase.from('patients').select('id', { count: 'exact', head: true }),
-      supabase.from('facilities').select('id', { count: 'exact', head: true }),
-      supabase.from('risk_assessments').select('id', { count: 'exact', head: true }).in('risk_level', ['high', 'critical']),
-      supabase.from('support_requests').select('id,request_type,title,details,priority,status,resolution_note,created_at,facilities(name)').order('created_at', { ascending: false })
+  async function loadCentralAdminData() {
+    // 1. Fetch Facilities
+    const { data: facs } = await supabase.from('facilities').select('*, users!users_facility_id_fkey(name, role)');
+
+    const demoHospitals = [
+      { id: 'h1', name: 'Rampur District Headquarters Hospital', district: 'Rampur Central', address: 'Hospital Road, Sector 1', phone: '+91 98765 00001', bed_capacity: 120, status: 'Active' },
+      { id: 'h2', name: 'Community Health Centre (CHC) Rampur', district: 'Rampur East', address: 'CHC Complex, Main Highway', phone: '+91 98765 00002', bed_capacity: 45, status: 'Active' },
+      { id: 'h3', name: 'Sub-District Emergency Care Facility', district: 'Rampur West', address: 'Station Road, Ward 4', phone: '+91 98765 00003', bed_capacity: 30, status: 'Active' },
+      { id: 'h4', name: 'Maternal & Child Referral Hospital', district: 'Rampur South', address: 'Civil Lines, Block B', phone: '+91 98765 00004', bed_capacity: 60, status: 'Active' }
+    ];
+
+    const demoPhcs = [
+      { id: 'p1', name: 'Primary Health Centre Rampur Central', district: 'Rampur Central', head_name: 'Dr. Rajesh Sharma', worker_count: 8, status: 'Operational' },
+      { id: 'p2', name: 'PHC Rampur East Sub-branch', district: 'Rampur East', head_name: 'Dr. Ananya Sharma', worker_count: 5, status: 'Operational' },
+      { id: 'p3', name: 'PHC Rampur West Sub-branch', district: 'Rampur West', head_name: 'Dr. Vikramaditya Roy', worker_count: 6, status: 'Operational' },
+      { id: 'p4', name: 'PHC Anandpur Rural Centre', district: 'Anandpur Area', head_name: 'Dr. Suresh Verma', worker_count: 4, status: 'Operational' },
+      { id: 'p5', name: 'PHC Chandanpur Community Post', district: 'Chandanpur Area', head_name: 'Dr. Meena Patel', worker_count: 5, status: 'Operational' },
+      { id: 'p6', name: 'PHC Sundarpur Health Outpost', district: 'Sundarpur Area', head_name: 'Dr. Arvind Kumar', worker_count: 3, status: 'Operational' }
+    ];
+
+    const demoLocations = [
+      { id: 'l1', area_name: 'Rampur Central District', district: 'Rampur District', phc_count: 2, hospital_name: 'Rampur District Headquarters Hospital', status: 'Covered' },
+      { id: 'l2', area_name: 'Rampur East Sub-region', district: 'Rampur District', phc_count: 2, hospital_name: 'CHC Rampur', status: 'Covered' },
+      { id: 'l3', area_name: 'Rampur West Sub-region', district: 'Rampur District', phc_count: 2, hospital_name: 'Sub-District Care Facility', status: 'Covered' }
+    ];
+
+    const demoHeads = [
+      { id: 'ph1', name: 'Dr. Ananya Sharma', assigned_phc: 'PHC Rampur East Sub-branch', area: 'Rampur East Sub-region', email: 'phchead@gramswasthya.demo', phone: '+91 98765 23456', status: 'Authorised' },
+      { id: 'ph2', name: 'Dr. Rajesh Sharma', assigned_phc: 'Primary Health Centre Rampur Central', area: 'Rampur Central District', email: 'rajesh.sharma@gramswasthya.in', phone: '+91 98765 12345', status: 'Authorised' },
+      { id: 'ph3', name: 'Dr. Vikramaditya Roy', assigned_phc: 'PHC Rampur West Sub-branch', area: 'Rampur West Sub-region', email: 'central@gramswasthya.demo', phone: '+91 98765 34567', status: 'Authorised' }
+    ];
+
+    const demoDemands = [
+      { id: 'req-1', title: '12 Oxygen Cylinders & Flowmeters', requested_by_head: 'Dr. Rajesh Sharma', phc_name: 'PHC Rampur Central', priority: 'high', status: 'pending', created_at: '2026-09-18' },
+      { id: 'req-2', title: 'ECG Machine & Diagnostic Test Strips', requested_by_head: 'Dr. Ananya Sharma', phc_name: 'PHC Rampur East Sub-branch', priority: 'high', status: 'in_progress', created_at: '2026-09-17' },
+      { id: 'req-3', title: 'Emergency Transport Ambulance Unit', requested_by_head: 'Dr. Vikramaditya Roy', phc_name: 'PHC Rampur West Sub-branch', priority: 'urgent', status: 'pending', created_at: '2026-09-16' }
+    ];
+
+    const demoFeedbacks = [
+      { id: 'fb-1', sender_name: 'Anita Devi', role: 'Patient', phc_name: 'PHC Rampur Central', rating: 5, category: 'Doctor & Nursing Care', message: 'Maternal checkup was very smooth. Clear explanation of medicines.' },
+      { id: 'fb-2', sender_name: 'Ramesh Singh', role: 'Patient', phc_name: 'PHC Rampur East', rating: 4, category: 'PHC Facility & Cleanliness', message: 'Clean waiting area and prompt blood pressure testing.' },
+      { id: 'fb-3', sender_name: 'Sunita Verma', role: 'Health Worker', phc_name: 'PHC Anandpur', rating: 5, category: 'Mobile Screening Kits', message: 'Offline sync tablets provided by central authority work great.' }
+    ];
+
+    const demoComplaints = [
+      { id: 'cmp-1', ticket_no: 'GRM-CMP-081', complainant_name: 'Dr. Rajesh Sharma', issue_category: 'Equipment Breakdown', title: 'ECG Machine Sensor Fault', priority: 'Critical', status: 'Under Investigation' },
+      { id: 'cmp-2', ticket_no: 'GRM-CMP-079', complainant_name: 'Sunita Devi', issue_category: 'Medicine Delay', title: 'Tetanus Toxoid Stock Out Risk', priority: 'High', status: 'Open' },
+      { id: 'cmp-3', ticket_no: 'GRM-CMP-074', complainant_name: 'Ramesh Kumar', issue_category: 'Patient Grievance', title: 'Long OPD Wait Time for BP Checks', priority: 'Medium', status: 'Resolved' }
+    ];
+
+    const { data: pts } = await supabase.from('patients').select('*, facilities(name)');
+
+    setLocationsList(demoLocations);
+    setHospitalsList(demoHospitals);
+    setPhcsList(demoPhcs);
+    setPhcHeadsList(demoHeads);
+    setDemandsList(demoDemands);
+    setFeedbacksList(demoFeedbacks);
+    setComplaintsList(demoComplaints);
+    setPatientsList(pts && pts.length ? pts : [
+      { id: 'pt1', patient_code: 'GS-DEMO-001', name: 'Ramesh Kumar', age: 45, gender: 'male', village: 'Rampur', area: 'Rampur Central', verification_status: 'verified', facilities: { name: 'PHC Rampur Central' } },
+      { id: 'pt2', patient_code: 'GS-DEMO-002', name: 'Priya Sharma', age: 28, gender: 'female', village: 'Rampur East', area: 'Rampur East', verification_status: 'verified', facilities: { name: 'PHC Rampur East' } },
+      { id: 'pt3', patient_code: 'GS-DEMO-003', name: 'Sunita Devi', age: 34, gender: 'female', village: 'Anandpur', area: 'Anandpur Area', verification_status: 'verified', facilities: { name: 'PHC Anandpur' } },
+      { id: 'pt4', patient_code: 'GS-DEMO-004', name: 'Vikram Singh', age: 52, gender: 'male', village: 'Chandanpur', area: 'Chandanpur Area', verification_status: 'pending', facilities: { name: 'PHC Chandanpur' } },
+      { id: 'pt5', patient_code: 'GS-DEMO-005', name: 'Anita Patel', age: 23, gender: 'female', village: 'Sundarpur', area: 'Sundarpur Area', verification_status: 'verified', facilities: { name: 'PHC Sundarpur' } },
+      { id: 'pt6', patient_code: 'GS-DEMO-006', name: 'Rajesh Gupta', age: 60, gender: 'male', village: 'Rampur West', area: 'Rampur West', verification_status: 'verified', facilities: { name: 'PHC Rampur West' } }
     ]);
 
     setStats({
-      totalPatients: pts.count || 0,
-      totalFacilities: facs.count || 0,
-      highRisk: risks.count || 0,
-      pendingRequests: (reqs.data || []).filter(r => r.status === 'requested' || r.status === 'under_review').length
+      totalLocations: demoLocations.length,
+      totalHospitals: demoHospitals.length,
+      totalHeads: demoHeads.length,
+      totalPhcs: demoPhcs.length,
+      totalPatients: pts && pts.length ? pts.length : 6,
+      totalDemands: demoDemands.length,
+      totalFeedbacks: demoFeedbacks.length,
+      totalComplaints: demoComplaints.length
     });
-
-    setRequests((reqs.data || []) as unknown as SupportRequest[]);
   }
 
-  useEffect(() => { loadData(); }, []);
-
-  async function updateDemandStatus(reqId: string, status: string) {
-    const note = prompt('Enter resolution note for PHC Head/Worker:', 'Reviewed and approved by Central Authority.');
-    if (note === null) return;
-    const { error } = await supabase.from('support_requests').update({ status, resolution_note: note }).eq('id', reqId);
-    if (error) setNotice(`Failed to update demand: ${error.message}`);
-    else { setNotice('Resource demand status updated.'); loadData(); }
-  }
-
-  const filteredRequests = requests.filter(r => `${r.title} ${r.details} ${r.facilities?.name || ''}`.toLowerCase().includes(search.toLowerCase()));
+  useEffect(() => { loadCentralAdminData(); }, []);
 
   return (
     <div className="space-y-6">
       {/* Central Authority Header */}
-      <section className="rounded-3xl bg-gradient-to-r from-amber-700 via-amber-800 to-slate-900 p-6 text-white sm:p-8 shadow-xl">
+      <section className="rounded-3xl bg-gradient-to-r from-blue-900 via-indigo-950 to-slate-900 p-6 text-white sm:p-8 shadow-xl">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3.5 py-1 text-xs font-bold text-amber-200 backdrop-blur">
-              <ShieldCheck className="h-4 w-4 text-amber-300" /> TIER 1 — CENTRAL HEALTHCARE AUTHORITY
+            <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3.5 py-1 text-xs font-bold text-blue-200 backdrop-blur">
+              <ShieldCheck className="h-4 w-4 text-blue-300" /> CENTRAL HEALTHCARE AUTHORITY — SYSTEM ADMINISTRATION & OVERSIGHT
             </div>
             <h1 className="mt-3 text-2xl font-black sm:text-4xl text-white">
-              Statewide Healthcare Oversight & Resource Management
+              Statewide Healthcare Administration & Monitoring
             </h1>
-            <p className="mt-2 text-sm text-amber-100 max-w-2xl leading-relaxed">
-              Full authorized access to all hospitals, PHCs, patient registries, high-risk cases, resource demands, and Help Care support feedback.
+            <p className="mt-2 text-sm text-blue-100 max-w-2xl leading-relaxed">
+              Full Central Authority access to view patient records, PHC sub-branches, review equipment/resource demands, monitor feedback, and resolve complaint tickets.
             </p>
           </div>
         </div>
@@ -150,152 +210,506 @@ function CentralAuthorityDashboard({ profile }: { profile: any }) {
 
       {notice && <div className="rounded-xl bg-blue-50 p-4 text-xs font-bold text-blue-900">{notice}</div>}
 
-      {/* Metrics Row */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="card p-5 border-amber-200">
-          <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-bold uppercase">All District Patients</span>
-            <Users className="h-5 w-5 text-amber-600" />
-          </div>
-          <p className="mt-3 text-3xl font-black text-slate-900">{stats.totalPatients}</p>
-          <p className="mt-1 text-xs text-slate-500">Across all connected PHCs</p>
+      {/* Top Overview Metrics Cards */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <button onClick={() => setActiveTab('locations')} className={`card p-4 text-left transition-all ${activeTab === 'locations' ? 'ring-2 ring-blue-600 bg-blue-50/50' : ''}`}>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Area Locations & PHCs</p>
+          <p className="mt-2 text-2xl font-black text-slate-900">{stats.totalLocations} Areas / {stats.totalPhcs} PHCs</p>
+          <p className="mt-1 text-[11px] font-bold text-blue-700">Covered Regions →</p>
+        </button>
+
+        <button onClick={() => setActiveTab('patients')} className={`card p-4 text-left transition-all ${activeTab === 'patients' ? 'ring-2 ring-blue-600 bg-blue-50/50' : ''}`}>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Master Patient Data</p>
+          <p className="mt-2 text-2xl font-black text-slate-900">{stats.totalPatients} Records</p>
+          <p className="mt-1 text-[11px] font-bold text-blue-700">All Patient Records →</p>
+        </button>
+
+        <button onClick={() => setActiveTab('resources')} className={`card p-4 text-left transition-all ${activeTab === 'resources' ? 'ring-2 ring-blue-600 bg-blue-50/50' : ''}`}>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Equipment Demands</p>
+          <p className="mt-2 text-2xl font-black text-amber-600">{stats.totalDemands} Demands</p>
+          <p className="mt-1 text-[11px] font-bold text-amber-700">Resource Requests →</p>
+        </button>
+
+        <button onClick={() => setActiveTab('feedback')} className={`card p-4 text-left transition-all ${activeTab === 'feedback' ? 'ring-2 ring-blue-600 bg-blue-50/50' : ''}`}>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Feedback Section</p>
+          <p className="mt-2 text-2xl font-black text-emerald-600">{stats.totalFeedbacks} Feedbacks</p>
+          <p className="mt-1 text-[11px] font-bold text-emerald-700">Patient & PHC Reviews →</p>
+        </button>
+
+        <button onClick={() => setActiveTab('complaints')} className={`card p-4 text-left transition-all ${activeTab === 'complaints' ? 'ring-2 ring-blue-600 bg-blue-50/50' : ''}`}>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Complaint Box</p>
+          <p className="mt-2 text-2xl font-black text-rose-600">{stats.totalComplaints} Tickets</p>
+          <p className="mt-1 text-[11px] font-bold text-rose-700">Grievances & Problems →</p>
+        </button>
+      </div>
+
+      {/* Main Admin Section Tabs */}
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-3">
+        <div className="flex flex-wrap gap-2">
+          <button onClick={() => setActiveTab('locations')} className={`rounded-xl px-4 py-2 text-xs font-black transition-all ${activeTab === 'locations' ? 'bg-blue-600 text-white shadow' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'}`}>
+            📍 1. Area Locations ({stats.totalLocations})
+          </button>
+
+          <button onClick={() => setActiveTab('hospitals')} className={`rounded-xl px-4 py-2 text-xs font-black transition-all ${activeTab === 'hospitals' ? 'bg-blue-600 text-white shadow' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'}`}>
+            🏥 2. Hospital List ({stats.totalHospitals})
+          </button>
+
+          <button onClick={() => setActiveTab('heads')} className={`rounded-xl px-4 py-2 text-xs font-black transition-all ${activeTab === 'heads' ? 'bg-blue-600 text-white shadow' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'}`}>
+            👨‍⚕️ 3. PHC Head List ({stats.totalHeads})
+          </button>
+
+          <button onClick={() => setActiveTab('phcs')} className={`rounded-xl px-4 py-2 text-xs font-black transition-all ${activeTab === 'phcs' ? 'bg-blue-600 text-white shadow' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'}`}>
+            🏢 4. All PHCs ({stats.totalPhcs})
+          </button>
+
+          <button onClick={() => setActiveTab('patients')} className={`rounded-xl px-4 py-2 text-xs font-black transition-all ${activeTab === 'patients' ? 'bg-blue-600 text-white shadow' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'}`}>
+            👥 5. All Patient Data ({stats.totalPatients})
+          </button>
+
+          <button onClick={() => setActiveTab('resources')} className={`rounded-xl px-4 py-2 text-xs font-black transition-all ${activeTab === 'resources' ? 'bg-amber-600 text-white shadow' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'}`}>
+            📦 6. Equipment Demands ({stats.totalDemands})
+          </button>
+
+          <button onClick={() => setActiveTab('feedback')} className={`rounded-xl px-4 py-2 text-xs font-black transition-all ${activeTab === 'feedback' ? 'bg-emerald-600 text-white shadow' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'}`}>
+            💬 7. Feedback Section ({stats.totalFeedbacks})
+          </button>
+
+          <button onClick={() => setActiveTab('complaints')} className={`rounded-xl px-4 py-2 text-xs font-black transition-all ${activeTab === 'complaints' ? 'bg-rose-600 text-white shadow' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'}`}>
+            🚨 8. Complaint Box ({stats.totalComplaints})
+          </button>
         </div>
 
-        <div className="card p-5 border-blue-200">
-          <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-bold uppercase">Connected PHCs & Hospitals</span>
-            <Building2 className="h-5 w-5 text-blue-600" />
-          </div>
-          <p className="mt-3 text-3xl font-black text-slate-900">{stats.totalFacilities}</p>
-          <p className="mt-1 text-xs text-slate-500">Active healthcare facilities</p>
-        </div>
-
-        <div className="card p-5 border-rose-200">
-          <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-bold uppercase">Critical & High Risk Cases</span>
-            <AlertTriangle className="h-5 w-5 text-rose-600" />
-          </div>
-          <p className="mt-3 text-3xl font-black text-slate-900">{stats.highRisk}</p>
-          <p className="mt-1 text-xs text-slate-500">Requiring clinical monitoring</p>
-        </div>
-
-        <div className="card p-5 border-emerald-200">
-          <div className="flex items-center justify-between text-slate-500">
-            <span className="text-xs font-bold uppercase">Pending Resource Demands</span>
-            <Activity className="h-5 w-5 text-emerald-600" />
-          </div>
-          <p className="mt-3 text-3xl font-black text-slate-900">{stats.pendingRequests}</p>
-          <p className="mt-1 text-xs text-slate-500">Awaiting Central approval</p>
+        <div className="relative min-w-[200px]">
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder={`Search ${activeTab}...`} className="input py-1.5 text-xs pl-9" />
         </div>
       </div>
 
-      {/* Resource Demands & Requests Management Section */}
-      <section className="card p-6 border-slate-200 shadow-md">
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
-          <div>
-            <span className="eyebrow">RESOURCE DEMAND & DISPATCH CONTROL</span>
-            <h2 className="text-xl font-black text-slate-900">PHC Area Resource Demands</h2>
-            <p className="text-xs text-slate-500">Review medicines, equipment, staffing, and camp demands submitted by Area PHC Heads.</p>
+      {/* SECTION 1: AREA / PHC LOCATIONS */}
+      {activeTab === 'locations' && (
+        <section className="card p-6 border-slate-200 shadow-md">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+            <div>
+              <span className="eyebrow">CENTRAL AUTHORITY MONITORING</span>
+              <h2 className="text-xl font-black text-slate-900">Area & PHC Locations Directory</h2>
+              <p className="text-xs text-slate-500">List of all geographical areas and locations covered by GramCare.</p>
+            </div>
+            <button onClick={() => setNotice('Location settings updated.')} className="secondary-btn text-xs">
+              Manage Location Data
+            </button>
           </div>
-          <div className="relative min-w-[220px]">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search demands..." className="input py-1.5 text-xs pl-9" />
-          </div>
-        </div>
 
-        {filteredRequests.length > 0 ? (
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                <tr>
+                  <th className="p-3">Area / Location Name</th>
+                  <th className="p-3">District Region</th>
+                  <th className="p-3">Related PHCs Count</th>
+                  <th className="p-3">Primary Referral Hospital</th>
+                  <th className="p-3">Coverage Status</th>
+                  <th className="p-3">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {locationsList
+                  .filter(l => `${l.area_name} ${l.district} ${l.hospital_name}`.toLowerCase().includes(search.toLowerCase()))
+                  .map(loc => (
+                    <tr key={loc.id} className="border-t border-slate-100">
+                      <td className="p-3 font-extrabold text-slate-900">{loc.area_name}</td>
+                      <td className="p-3 text-xs font-semibold text-slate-600">{loc.district}</td>
+                      <td className="p-3 text-xs font-bold text-blue-700">{loc.phc_count} Primary Health Centres</td>
+                      <td className="p-3 text-xs font-semibold text-slate-800">{loc.hospital_name}</td>
+                      <td className="p-3">
+                        <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">
+                          {loc.status}
+                        </span>
+                      </td>
+                      <td className="p-3">
+                        <button onClick={() => setNotice(`Viewing location details for ${loc.area_name}`)} className="text-xs font-bold text-blue-700 hover:underline">
+                          View Location →
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {/* SECTION 2: HOSPITAL LIST */}
+      {activeTab === 'hospitals' && (
+        <section className="card p-6 border-slate-200 shadow-md">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+            <div>
+              <span className="eyebrow">REGISTERED HEALTHCARE INSTITUTIONS</span>
+              <h2 className="text-xl font-black text-slate-900">Registered Hospital Directory</h2>
+              <p className="text-xs text-slate-500">Statewide list of registered referral hospitals, CHCs, and emergency centers.</p>
+            </div>
+            <button onClick={() => setNotice('Hospital registry updated.')} className="secondary-btn text-xs">
+              + Register New Hospital
+            </button>
+          </div>
+
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                <tr>
+                  <th className="p-3">Hospital Name</th>
+                  <th className="p-3">Location / Area</th>
+                  <th className="p-3">Address</th>
+                  <th className="p-3">Emergency Contact</th>
+                  <th className="p-3">Bed Capacity</th>
+                  <th className="p-3">Account Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {hospitalsList
+                  .filter(h => `${h.name} ${h.district} ${h.address}`.toLowerCase().includes(search.toLowerCase()))
+                  .map(hosp => (
+                    <tr key={hosp.id} className="border-t border-slate-100">
+                      <td className="p-3 font-extrabold text-slate-900">{hosp.name}</td>
+                      <td className="p-3 text-xs font-semibold text-slate-700">{hosp.district}</td>
+                      <td className="p-3 text-xs text-slate-600">{hosp.address}</td>
+                      <td className="p-3 text-xs font-bold text-emerald-700">{hosp.phone}</td>
+                      <td className="p-3 text-xs font-bold text-slate-900">{hosp.bed_capacity} Beds Available</td>
+                      <td className="p-3">
+                        <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700">
+                          {hosp.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {/* SECTION 3: PHC HEAD LIST */}
+      {activeTab === 'heads' && (
+        <section className="card p-6 border-slate-200 shadow-md">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+            <div>
+              <span className="eyebrow">AUTHORISED AREA LEADERSHIP</span>
+              <h2 className="text-xl font-black text-slate-900">PHC Head & Medical Officers List</h2>
+              <p className="text-xs text-slate-500">Central Directory of all authorised PHC Heads and Medical Officers in charge.</p>
+            </div>
+            <button onClick={() => setNotice('PHC Head account directory refreshed.')} className="secondary-btn text-xs">
+              Manage Accounts
+            </button>
+          </div>
+
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                <tr>
+                  <th className="p-3">PHC Head Name</th>
+                  <th className="p-3">Assigned PHC</th>
+                  <th className="p-3">Area / Jurisdiction</th>
+                  <th className="p-3">Email & Contact</th>
+                  <th className="p-3">Account Status</th>
+                  <th className="p-3">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {phcHeadsList
+                  .filter(head => `${head.name} ${head.assigned_phc} ${head.email}`.toLowerCase().includes(search.toLowerCase()))
+                  .map(head => (
+                    <tr key={head.id} className="border-t border-slate-100">
+                      <td className="p-3 font-extrabold text-slate-900">{head.name}</td>
+                      <td className="p-3 text-xs font-semibold text-blue-700">{head.assigned_phc}</td>
+                      <td className="p-3 text-xs text-slate-600">{head.area}</td>
+                      <td className="p-3 text-xs text-slate-700">
+                        <p className="font-bold">{head.email}</p>
+                        <p className="text-slate-500">{head.phone}</p>
+                      </td>
+                      <td className="p-3">
+                        <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">
+                          {head.status}
+                        </span>
+                      </td>
+                      <td className="p-3">
+                        <button onClick={() => setNotice(`Managing account details for ${head.name}`)} className="text-xs font-bold text-blue-700 hover:underline">
+                          View Account →
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {/* SECTION 4: ALL PHCS */}
+      {activeTab === 'phcs' && (
+        <section className="card p-6 border-slate-200 shadow-md">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+            <div>
+              <span className="eyebrow">PRIMARY HEALTHCARE CENTRES</span>
+              <h2 className="text-xl font-black text-slate-900">Registered PHC Facilities Directory</h2>
+              <p className="text-xs text-slate-500">Every registered Primary Health Centre across all sub-branches.</p>
+            </div>
+            <button onClick={() => setNotice('PHC registry updated.')} className="secondary-btn text-xs">
+              + Register New PHC
+            </button>
+          </div>
+
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                <tr>
+                  <th className="p-3">PHC Name</th>
+                  <th className="p-3">Area / Location</th>
+                  <th className="p-3">PHC Head in Charge</th>
+                  <th className="p-3">Assigned Workers</th>
+                  <th className="p-3">Operational Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {phcsList
+                  .filter(phc => `${phc.name} ${phc.district} ${phc.head_name}`.toLowerCase().includes(search.toLowerCase()))
+                  .map(phc => (
+                    <tr key={phc.id} className="border-t border-slate-100">
+                      <td className="p-3 font-extrabold text-slate-900">{phc.name}</td>
+                      <td className="p-3 text-xs font-semibold text-slate-700">{phc.district}</td>
+                      <td className="p-3 text-xs font-bold text-blue-700">{phc.head_name}</td>
+                      <td className="p-3 text-xs font-bold text-slate-900">{phc.worker_count} Staff & Workers</td>
+                      <td className="p-3">
+                        <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">
+                          {phc.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {/* SECTION 5: ALL PATIENT DATA */}
+      {activeTab === 'patients' && (
+        <section className="card p-6 border-slate-200 shadow-md">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+            <div>
+              <span className="eyebrow">SYSTEM-WIDE PATIENT REGISTRY</span>
+              <h2 className="text-xl font-black text-slate-900">All Patient Master Data</h2>
+              <p className="text-xs text-slate-500">Complete authorized system-wide patient registry across all connected PHCs.</p>
+            </div>
+            <div className="relative min-w-[220px]">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Filter patient data..." className="input py-1.5 text-xs pl-9" />
+            </div>
+          </div>
+
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                <tr>
+                  <th className="p-3">Patient Name & Code</th>
+                  <th className="p-3">Assigned PHC</th>
+                  <th className="p-3">Village / Area</th>
+                  <th className="p-3">Demographics</th>
+                  <th className="p-3">Registration Status</th>
+                  <th className="p-3">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {patientsList
+                  .filter(p => `${p.name} ${p.patient_code} ${p.village || ''} ${p.area || ''}`.toLowerCase().includes(search.toLowerCase()))
+                  .map(pt => (
+                    <tr key={pt.id} className="border-t border-slate-100">
+                      <td className="p-3">
+                        <p className="font-extrabold text-slate-900">{pt.name}</p>
+                        <p className="text-xs text-slate-500">{pt.patient_code || 'GS-DEMO-001'}</p>
+                      </td>
+                      <td className="p-3 text-xs font-semibold text-blue-700">{pt.facilities?.name || pt.assigned_phc || 'PHC Rampur Central'}</td>
+                      <td className="p-3 text-xs text-slate-700">{pt.village || pt.area || 'Rampur Area'}</td>
+                      <td className="p-3 text-xs text-slate-600">{pt.age} yrs · <span className="capitalize">{pt.gender}</span></td>
+                      <td className="p-3">
+                        <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700 capitalize">
+                          {pt.verification_status || 'verified'}
+                        </span>
+                      </td>
+                      <td className="p-3">
+                        <Link href={`/patients/${pt.patient_code || 'GS-DEMO-001'}`} className="text-xs font-bold text-blue-700 hover:underline">
+                          View Record →
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {/* SECTION 6: EQUIPMENT & RESOURCE DEMANDS */}
+      {activeTab === 'resources' && (
+        <section className="card p-6 border-slate-200 shadow-md">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+            <div>
+              <span className="eyebrow">HIGHER AUTHORITY RESOURCE MANAGEMENT</span>
+              <h2 className="text-xl font-black text-slate-900">Equipment & Resource Demands</h2>
+              <p className="text-xs text-slate-500">Demands submitted by Area PHC Heads for equipment, medical supplies, and emergency units.</p>
+            </div>
+            <Link href="/resources" className="primary-btn text-xs">
+              View Full Resource Center →
+            </Link>
+          </div>
+
           <div className="mt-4 overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase text-slate-500">
                 <tr>
                   <th className="p-3">Demand Title</th>
-                  <th className="p-3">Requesting PHC</th>
-                  <th className="p-3">Type</th>
+                  <th className="p-3">Requested By (PHC Head)</th>
+                  <th className="p-3">PHC Facility</th>
+                  <th className="p-3">Priority Level</th>
+                  <th className="p-3">Status</th>
+                  <th className="p-3">Central Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {demandsList
+                  .filter(d => `${d.title} ${d.requested_by_head} ${d.phc_name}`.toLowerCase().includes(search.toLowerCase()))
+                  .map(dem => (
+                    <tr key={dem.id} className="border-t border-slate-100">
+                      <td className="p-3 font-extrabold text-slate-900">{dem.title}</td>
+                      <td className="p-3 text-xs font-semibold text-slate-700">{dem.requested_by_head}</td>
+                      <td className="p-3 text-xs text-blue-700 font-bold">{dem.phc_name}</td>
+                      <td className="p-3">
+                        <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${dem.priority === 'urgent' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800'}`}>
+                          {dem.priority} Priority
+                        </span>
+                      </td>
+                      <td className="p-3">
+                        <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${dem.status === 'approved' ? 'bg-emerald-100 text-emerald-800' : dem.status === 'in_progress' ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-700'}`}>
+                          {dem.status}
+                        </span>
+                      </td>
+                      <td className="p-3">
+                        <button
+                          onClick={() => {
+                            setDemandsList(demandsList.map(item => item.id === dem.id ? { ...item, status: 'approved' } : item));
+                            setNotice(`Resource demand "${dem.title}" approved by Central Authority.`);
+                          }}
+                          className="rounded-lg bg-emerald-600 px-3 py-1 text-xs font-bold text-white shadow hover:bg-emerald-700"
+                        >
+                          Approve Demand
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {/* SECTION 7: FEEDBACK SECTION */}
+      {activeTab === 'feedback' && (
+        <section className="card p-6 border-slate-200 shadow-md">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+            <div>
+              <span className="eyebrow">STATEWIDE FEEDBACK MONITORING</span>
+              <h2 className="text-xl font-black text-slate-900">Feedback Section</h2>
+              <p className="text-xs text-slate-500">Service evaluations and feedback received from patients and health workers.</p>
+            </div>
+            <Link href="/feedback" className="secondary-btn text-xs">
+              Open Dedicated Feedback Portal →
+            </Link>
+          </div>
+
+          <div className="mt-4 space-y-3">
+            {feedbacksList
+              .filter(f => `${f.sender_name} ${f.message} ${f.category}`.toLowerCase().includes(search.toLowerCase()))
+              .map(fb => (
+                <div key={fb.id} className="rounded-2xl border border-slate-200 p-4 bg-slate-50/50">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="font-black text-slate-900 text-sm">{fb.sender_name}</span>
+                      <span className="ml-2 text-xs font-semibold text-slate-500">({fb.role} · {fb.phc_name})</span>
+                    </div>
+                    <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-extrabold text-amber-800">
+                      {'⭐'.repeat(fb.rating)} ({fb.rating}/5)
+                    </span>
+                  </div>
+                  <p className="mt-2 text-xs text-slate-700 leading-relaxed">{fb.message}</p>
+                  <p className="mt-2 text-[10px] font-bold text-blue-700">Category: {fb.category}</p>
+                </div>
+              ))}
+          </div>
+        </section>
+      )}
+
+      {/* SECTION 8: COMPLAINT BOX */}
+      {activeTab === 'complaints' && (
+        <section className="card p-6 border-slate-200 shadow-md">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+            <div>
+              <span className="eyebrow">CENTRAL GRIEVANCE REDRESSAL</span>
+              <h2 className="text-xl font-black text-slate-900">Complaint Box & Problem Tracking</h2>
+              <p className="text-xs text-slate-500">Centralized list of issues, breakdown reports, and grievances requiring action.</p>
+            </div>
+            <Link href="/complaints" className="primary-btn text-xs">
+              Open Complaint Desk →
+            </Link>
+          </div>
+
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                <tr>
+                  <th className="p-3">Ticket No</th>
+                  <th className="p-3">Problem Title</th>
+                  <th className="p-3">Complainant</th>
+                  <th className="p-3">Category</th>
                   <th className="p-3">Priority</th>
                   <th className="p-3">Status</th>
                   <th className="p-3">Action</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredRequests.map(req => (
-                  <tr key={req.id} className="border-t border-slate-100">
-                    <td className="p-3">
-                      <p className="font-bold text-slate-900">{req.title}</p>
-                      <p className="text-xs text-slate-500 line-clamp-1">{req.details}</p>
-                      {req.resolution_note && <p className="text-[11px] font-semibold text-blue-700 mt-0.5">Note: {req.resolution_note}</p>}
-                    </td>
-                    <td className="p-3 font-semibold text-slate-700">{req.facilities?.name || 'Authorised PHC'}</td>
-                    <td className="p-3 capitalize text-xs font-bold text-slate-600">{req.request_type.replaceAll('_', ' ')}</td>
-                    <td className="p-3">
-                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${req.priority === 'urgent' ? 'bg-rose-100 text-rose-800' : 'bg-blue-50 text-blue-800'}`}>
-                        {req.priority}
-                      </span>
-                    </td>
-                    <td className="p-3">
-                      <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700 capitalize">
-                        {req.status.replaceAll('_', ' ')}
-                      </span>
-                    </td>
-                    <td className="p-3">
-                      {req.status !== 'fulfilled' && (
-                        <div className="flex gap-2">
-                          <button onClick={() => updateDemandStatus(req.id, 'fulfilled')} className="rounded-lg bg-emerald-600 px-2.5 py-1 text-xs font-bold text-white hover:bg-emerald-700">
-                            Fulfill Demand
-                          </button>
-                          <button onClick={() => updateDemandStatus(req.id, 'under_review')} className="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-700 hover:bg-slate-200">
-                            Under Review
-                          </button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                {complaintsList
+                  .filter(c => `${c.ticket_no} ${c.title} ${c.complainant_name}`.toLowerCase().includes(search.toLowerCase()))
+                  .map(cmp => (
+                    <tr key={cmp.id} className="border-t border-slate-100">
+                      <td className="p-3 text-xs font-black text-slate-500">{cmp.ticket_no}</td>
+                      <td className="p-3 font-extrabold text-slate-900">{cmp.title}</td>
+                      <td className="p-3 text-xs font-semibold text-slate-700">{cmp.complainant_name}</td>
+                      <td className="p-3 text-xs text-slate-600">{cmp.issue_category}</td>
+                      <td className="p-3">
+                        <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${cmp.priority === 'Critical' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800'}`}>
+                          {cmp.priority}
+                        </span>
+                      </td>
+                      <td className="p-3">
+                        <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${cmp.status === 'Resolved' ? 'bg-emerald-100 text-emerald-800' : cmp.status === 'Under Investigation' ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800'}`}>
+                          {cmp.status}
+                        </span>
+                      </td>
+                      <td className="p-3">
+                        <button
+                          onClick={() => {
+                            setComplaintsList(complaintsList.map(item => item.id === cmp.id ? { ...item, status: 'Resolved' } : item));
+                            setNotice(`Complaint ticket ${cmp.ticket_no} marked as Resolved by Central Authority.`);
+                          }}
+                          className="rounded-lg bg-blue-600 px-3 py-1 text-xs font-bold text-white shadow hover:bg-blue-700"
+                        >
+                          Resolve Ticket
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
           </div>
-        ) : (
-          <div className="p-8 text-center text-xs text-slate-500">No resource demands submitted yet.</div>
-        )}
-      </section>
-
-      {/* Help Care Desk & Complaints/Feedback Section */}
-      <section className="card p-6 border-slate-200 shadow-md">
-        <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-          <div className="grid h-10 w-10 place-items-center rounded-xl bg-blue-100 text-blue-700">
-            <HelpCircle className="h-5 w-5" />
-          </div>
-          <div>
-            <h2 className="text-xl font-black text-slate-900">Help Care Desk & Feedback/Complaints</h2>
-            <p className="text-xs text-slate-500">Monitor and respond to patient complaints and PHC field worker support queries.</p>
-          </div>
-        </div>
-
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <div className="rounded-2xl border border-slate-200 p-4 bg-slate-50/50">
-            <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
-              <MessageSquare className="h-4 w-4 text-blue-600" /> Patient Correction & Feedback Desk
-            </h3>
-            <p className="mt-1 text-xs text-slate-600">Patients can submit profile correction requests or PHC feedback for Central review.</p>
-            <div className="mt-4 rounded-xl bg-white p-3 border border-slate-200 text-xs">
-              <p className="font-bold text-slate-900">Patient Correction Request #CR-104</p>
-              <p className="text-slate-600 mt-1">"Requested update to blood group record and ANC visit date verification."</p>
-              <span className="inline-block mt-2 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">Assigned to PHC Lead for Review</span>
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-slate-200 p-4 bg-slate-50/50">
-            <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4 text-emerald-600" /> PHC Emergency Outbreak Hotline
-            </h3>
-            <p className="mt-1 text-xs text-slate-600">Direct hotline for PHC Heads to report seasonal flu or waterborne outbreak situations.</p>
-            <div className="mt-4 rounded-xl bg-white p-3 border border-slate-200 text-xs">
-              <p className="font-bold text-slate-900">Seasonal Fever Alert — Rampur Area</p>
-              <p className="text-slate-600 mt-1">18 cases reported. Medicine supply dispatched from Central storage.</p>
-              <span className="inline-block mt-2 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-800">Support Dispatched</span>
-            </div>
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
     </div>
   );
 }

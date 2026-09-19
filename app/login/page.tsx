@@ -79,27 +79,20 @@ export default function Login() {
   const [error, setError] = useState<string>('');
   const [busy, setBusy] = useState<boolean>(false);
 
-  function selectRole(preset: RolePreset) {
-    setSelectedPresetId(preset.id);
-    setEmail(preset.email);
-    setPassword('Demo@12345');
-    setError('');
-  }
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
+  async function performLogin(targetEmail: string, presetId: string) {
     setBusy(true);
     setError('');
 
-    const targetEmail = email.trim();
+    // Sign out any existing session first to ensure clean role switch
+    await supabase.auth.signOut();
 
     // 1. Attempt standard sign in
     let { data, error: authError } = await supabase.auth.signInWithPassword({
       email: targetEmail,
-      password
+      password: 'Demo@12345'
     });
 
-    // 2. If sign-in fails for a demo account, auto-provision account in Supabase Auth
+    // 2. Auto-provision demo user if needed
     if ((authError || !data?.user) && targetEmail.includes('@gramswasthya.demo')) {
       const roleMap: Record<string, { name: string; role: string }> = {
         'central@gramswasthya.demo': { name: 'Central Authority Demo', role: 'central_authority' },
@@ -109,24 +102,22 @@ export default function Login() {
       };
 
       const presetInfo = roleMap[targetEmail] || {
-        name: selectedPresetId === 'central' ? 'Central Authority' : selectedPresetId === 'head' ? 'PHC Head' : selectedPresetId === 'worker' ? 'ASHA Worker' : 'Patient Demo',
-        role: selectedPresetId === 'central' ? 'central_authority' : selectedPresetId === 'head' ? 'phc_head' : selectedPresetId === 'worker' ? 'phc_worker' : 'patient'
+        name: presetId === 'central' ? 'Central Authority' : presetId === 'head' ? 'PHC Head' : presetId === 'worker' ? 'ASHA Worker' : 'Patient Demo',
+        role: presetId === 'central' ? 'central_authority' : presetId === 'head' ? 'phc_head' : presetId === 'worker' ? 'phc_worker' : 'patient'
       };
 
-      // Sign up demo user
       const signUpRes = await supabase.auth.signUp({
         email: targetEmail,
-        password,
+        password: 'Demo@12345',
         options: {
           data: { name: presetInfo.name, requested_role: presetInfo.role }
         }
       });
 
       if (signUpRes.data?.user) {
-        // Re-attempt sign in
         const retryRes = await supabase.auth.signInWithPassword({
           email: targetEmail,
-          password
+          password: 'Demo@12345'
         });
         data = retryRes.data;
         authError = retryRes.error;
@@ -134,42 +125,49 @@ export default function Login() {
     }
 
     if (!data?.user) {
-      setError(authError?.message || 'Unable to sign in. Please check your credentials or select a role card above.');
+      setError(authError?.message || 'Unable to sign in. Please check your credentials.');
       setBusy(false);
       return;
     }
 
-    // 3. Ensure public.users profile exists with correct role
-    const roleMap: Record<string, string> = {
+    const roleDbMap: Record<string, string> = {
       'central@gramswasthya.demo': 'central_authority',
       'phchead@gramswasthya.demo': 'phc_head',
       'worker@gramswasthya.demo': 'phc_worker',
       'patient@gramswasthya.demo': 'patient'
     };
 
-    const targetDbRole = roleMap[targetEmail] || (selectedPresetId === 'central' ? 'central_authority' : selectedPresetId === 'head' ? 'phc_head' : selectedPresetId === 'worker' ? 'phc_worker' : 'patient');
+    const targetDbRole = roleDbMap[targetEmail] || (presetId === 'central' ? 'central_authority' : presetId === 'head' ? 'phc_head' : presetId === 'worker' ? 'phc_worker' : 'patient');
 
-    const { data: profile } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', data.user.id)
-      .single();
+    await supabase.from('users').upsert({
+      id: data.user.id,
+      email: targetEmail,
+      name: targetEmail.split('@')[0].toUpperCase(),
+      role: targetDbRole
+    });
 
-    if (!profile || profile.role !== targetDbRole) {
-      await supabase.from('users').upsert({
-        id: data.user.id,
-        email: targetEmail,
-        name: targetEmail.split('@')[0].toUpperCase(),
-        role: targetDbRole
-      });
-    }
+    const targetUiRole = uiRoleFor(targetDbRole);
 
-    const targetRole = uiRoleFor(profile?.role || targetDbRole);
     if (typeof window !== 'undefined') {
+      localStorage.setItem('override_role', targetUiRole);
       localStorage.setItem('gramcare_role', targetDbRole);
       localStorage.setItem('demo_role', targetDbRole);
     }
-    router.replace(targetRole === 'patient' ? '/patient-dashboard' : '/dashboard');
+
+    router.replace(targetUiRole === 'patient' ? '/patient-dashboard' : '/dashboard');
+  }
+
+  function selectRole(preset: RolePreset) {
+    setSelectedPresetId(preset.id);
+    setEmail(preset.email);
+    setPassword('Demo@12345');
+    setError('');
+    performLogin(preset.email, preset.id);
+  }
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    performLogin(email.trim(), selectedPresetId);
   }
 
   return (

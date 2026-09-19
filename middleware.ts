@@ -18,12 +18,12 @@ const dbToUiRole: Record<string, string> = {
 
 const routeRoles: Record<string, string[]> = {
   '/patients': ['central', 'head', 'worker', 'doctor'],
-  '/assessment': ['central', 'head', 'worker', 'doctor'],
-  '/referrals': ['central', 'head', 'worker', 'doctor', 'hospital', 'patient'],
-  '/follow-ups': ['central', 'head', 'worker', 'doctor', 'hospital', 'patient'],
+  '/assessment': ['head', 'worker', 'doctor'],
+  '/referrals': ['head', 'worker', 'doctor', 'hospital', 'patient'],
+  '/follow-ups': ['head', 'worker', 'doctor', 'hospital', 'patient'],
   '/hospital': ['central', 'hospital'],
-  '/maternal-care': ['central', 'head', 'worker', 'patient'],
-  '/health-education': ['central', 'head', 'worker', 'doctor', 'hospital', 'patient'],
+  '/maternal-care': ['head', 'worker', 'patient'],
+  '/health-education': ['head', 'worker', 'doctor', 'hospital', 'patient'],
   '/map': ['central', 'head', 'worker', 'doctor', 'hospital', 'patient'],
   '/resources': ['central', 'head', 'worker'],
   '/health-camps': ['central', 'head', 'worker', 'patient'],

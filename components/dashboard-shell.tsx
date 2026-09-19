@@ -6,28 +6,60 @@ import { useEffect, useState } from 'react';
 import { GramRole, roleLabels } from '@/lib/grams-data';
 import { currentRole } from '@/lib/auth';
 import { languageOptions } from '@/lib/i18n/translations';
-import { uiLabels } from '@/lib/i18n/ui-labels';
 import { useSettings } from '@/lib/context/settings-context';
 import { Bell, BookOpen, CalendarDays, ClipboardList, FileText, HeartPulse, LayoutDashboard, LogOut, Map, Menu, ShieldCheck, Users, Wifi, X } from 'lucide-react';
 import { syncEngine } from '@/lib/offline/sync-engine';
 
-const allNav = [
-  ['dashboard', 'Dashboard', LayoutDashboard, ['central', 'head', 'worker', 'doctor', 'hospital']],
-  ['patient-dashboard', 'My Health Dashboard', LayoutDashboard, ['patient']],
-  ['patients', 'Patients', Users, ['central', 'head', 'worker', 'doctor']],
-  ['assessment', 'Risk screening', HeartPulse, ['central', 'head', 'worker', 'doctor']],
-  ['referrals', 'Referrals', ClipboardList, ['central', 'head', 'worker', 'doctor', 'hospital', 'patient']],
-  ['follow-ups', 'Follow-ups', CalendarDays, ['central', 'head', 'worker', 'doctor', 'hospital', 'patient']],
-  ['hospital', 'Hospital Queue', ClipboardList, ['central', 'hospital']],
-  ['maternal-care', 'Maternal Care', HeartPulse, ['central', 'head', 'worker', 'patient']],
-  ['health-education', 'Health Guidance', BookOpen, ['central', 'head', 'worker', 'doctor', 'hospital', 'patient']],
-  ['map', 'Nearby Care', Map, ['central', 'head', 'worker', 'doctor', 'hospital', 'patient']],
-  ['resources', 'Resource Demands', ClipboardList, ['central', 'head', 'worker']],
-  ['health-camps', 'Health Camps', CalendarDays, ['central', 'head', 'worker', 'patient']],
-  ['outbreaks', 'Outbreaks', ClipboardList, ['central', 'head', 'worker']],
-  ['workers', 'Workers', Users, ['central', 'head']],
-  ['reports', 'Reports', FileText, ['central', 'head']],
-] as const;
+type NavItem = {
+  href: string;
+  label: string;
+  icon: any;
+};
+
+function getRoleNav(role: GramRole): NavItem[] {
+  switch (role) {
+    case 'central':
+      return [
+        { href: 'dashboard', label: 'Central Authority Dashboard', icon: LayoutDashboard },
+        { href: 'patients', label: 'All Patient Data', icon: Users },
+        { href: 'resources', label: 'Equipment & Resource Demands', icon: ClipboardList },
+        { href: 'feedback', label: 'Feedback Section', icon: FileText },
+        { href: 'complaints', label: 'Complaint Box', icon: Bell },
+        { href: 'map', label: 'Area & PHC Locations', icon: Map }
+      ];
+    case 'head':
+      return [
+        { href: 'dashboard', label: 'Area PHC Dashboard', icon: LayoutDashboard },
+        { href: 'patients', label: 'Area Patients & Doctors', icon: Users },
+        { href: 'resources', label: 'Demand Resources', icon: ClipboardList },
+        { href: 'outbreaks', label: 'Area Outbreaks & Camps', icon: HeartPulse }
+      ];
+    case 'worker':
+      return [
+        { href: 'dashboard', label: 'PHC Care Dashboard', icon: LayoutDashboard },
+        { href: 'patients', label: 'Register & Patients', icon: Users },
+        { href: 'assessment', label: 'Risk Screening', icon: HeartPulse },
+        { href: 'follow-ups', label: 'Follow-ups & Treatment', icon: CalendarDays },
+        { href: 'maternal-care', label: 'Maternal & Child Care', icon: BookOpen }
+      ];
+    case 'patient':
+      return [
+        { href: 'patient-dashboard', label: 'My Health Dashboard', icon: LayoutDashboard },
+        { href: 'map', label: 'Nearby Doctors & PHCs', icon: Map },
+        { href: 'health-education', label: 'Cartoon Guidance Videos', icon: BookOpen },
+        { href: 'referrals', label: 'Care Appointments', icon: CalendarDays },
+        { href: 'complaints', label: 'Complaint Box', icon: Bell },
+        { href: 'feedback', label: 'Feedback Section', icon: FileText }
+      ];
+    default:
+      return [
+        { href: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+        { href: 'patients', label: 'Patients', icon: Users },
+        { href: 'referrals', label: 'Referrals', icon: ClipboardList },
+        { href: 'health-education', label: 'Health Guidance', icon: BookOpen }
+      ];
+  }
+}
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
@@ -43,7 +75,6 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       if (found) {
         setRole(found);
       } else {
-        // Check local storage before redirecting to login
         const storedRole = typeof window !== 'undefined' ? (localStorage.getItem('gramcare_role') || localStorage.getItem('demo_role')) : null;
         if (storedRole) {
           const { uiRoleFor } = require('@/lib/auth');
@@ -56,27 +87,11 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     return syncEngine.subscribe((state, count) => { setOnline(state); setPending(count); });
   }, [router]);
 
-  const labels = uiLabels(language);
-  const navLabels: Record<string, string> = { 
-    dashboard: labels.dashboard, 
-    'patient-dashboard': 'My Health Dashboard',
-    patients: labels.patients, 
-    assessment: labels.assessment, 
-    referrals: labels.referrals, 
-    'follow-ups': labels.followUps, 
-    'maternal-care': labels.maternalCare, 
-    'health-education': labels.healthGuidance, 
-    map: labels.nearbyCare, 
-    resources: labels.requests, 
-    'health-camps': labels.healthCamps, 
-    outbreaks: labels.outbreaks, 
-    workers: labels.workers 
-  };
-  
-  const nav = allNav.filter(item => (item[3] as readonly GramRole[]).includes(role));
+  const nav = getRoleNav(role);
 
   async function logout() {
     if (typeof window !== 'undefined') {
+      localStorage.removeItem('override_role');
       localStorage.removeItem('gramcare_role');
       localStorage.removeItem('demo_role');
     }
@@ -102,28 +117,31 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         
         <div className="mt-6 rounded-xl border border-slate-700 bg-slate-900 p-3 text-xs">
           <span className="flex items-center gap-2 font-bold text-blue-200">
-            <ShieldCheck className="h-4 w-4" />
+            <ShieldCheck className="h-4 w-4 text-blue-400" />
             {roleLabels[role] || 'Authorised User'}
           </span>
-          <span className="mt-1 block text-slate-400">Active session</span>
+          <span className="mt-1 block text-slate-400">Role-aware limited workspace</span>
         </div>
 
-        <nav className="mt-6 space-y-1 overflow-y-auto flex-1">
-          {nav.map(([href, label, Icon]) => (
-            <Link 
-              onClick={() => setOpen(false)} 
-              key={href} 
-              href={`/${href}`} 
-              className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold transition-colors ${
-                path === `/${href}` || path.startsWith(`/${href}/`) 
-                  ? 'bg-blue-600 text-white shadow-md' 
-                  : 'text-slate-300 hover:bg-white/10 hover:text-white'
-              }`}
-            >
-              <Icon className="h-4 w-4 shrink-0" />
-              <span>{navLabels[href] || label}</span>
-            </Link>
-          ))}
+        <nav className="mt-6 space-y-1.5 overflow-y-auto flex-1">
+          {nav.map(({ href, label, icon: Icon }) => {
+            const isSelected = path === `/${href}` || (href === 'dashboard' && path === '/dashboard') || (href === 'patient-dashboard' && path === '/patient-dashboard');
+            return (
+              <Link 
+                onClick={() => setOpen(false)} 
+                key={href} 
+                href={`/${href}`} 
+                className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold transition-colors ${
+                  isSelected 
+                    ? 'bg-blue-600 text-white shadow-md' 
+                    : 'text-slate-300 hover:bg-white/10 hover:text-white'
+                }`}
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                <span>{label}</span>
+              </Link>
+            );
+          })}
         </nav>
 
         <button 
@@ -181,9 +199,39 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               <Bell className="h-4 w-4" />
             </Link>
 
-            <span className="hidden rounded-lg bg-blue-600 px-2.5 py-1.5 text-xs font-black text-white sm:block">
-              {roleLabels[role] || 'User'}
-            </span>
+            <select 
+              value={role} 
+              onChange={async (e) => {
+                const newRole = e.target.value as GramRole;
+                const dbRoleMap: Record<string, string> = {
+                  central: 'central_authority',
+                  head: 'phc_head',
+                  worker: 'phc_worker',
+                  patient: 'patient'
+                };
+                const dbRole = dbRoleMap[newRole] || 'central_authority';
+                if (typeof window !== 'undefined') {
+                  localStorage.setItem('override_role', newRole);
+                  localStorage.setItem('gramcare_role', dbRole);
+                  localStorage.setItem('demo_role', dbRole);
+                }
+                const { supabase } = await import('@/lib/supabase/client');
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) {
+                  await supabase.from('users').upsert({ id: user.id, role: dbRole });
+                }
+                setRole(newRole);
+                const targetPath = newRole === 'patient' ? '/patient-dashboard' : '/dashboard';
+                window.location.href = targetPath;
+              }}
+              className="rounded-lg bg-blue-600 px-2.5 py-1.5 text-xs font-black text-white cursor-pointer border-none outline-none shadow-sm hover:bg-blue-700 transition"
+              title="Switch Active Demo Role"
+            >
+              <option value="central" className="bg-slate-900 text-white">👑 Central Authority</option>
+              <option value="head" className="bg-slate-900 text-white">🏢 Area PHC Head</option>
+              <option value="worker" className="bg-slate-900 text-white">👩‍⚕️ Health Worker</option>
+              <option value="patient" className="bg-slate-900 text-white">👤 Patient Account</option>
+            </select>
           </div>
         </header>
 

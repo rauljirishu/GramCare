@@ -230,6 +230,188 @@ export default function PatientDashboard() {
           </div>
         </section>
 
+        {/* PHC Medication Schedule & Treatment Process Reminders */}
+        <section className="card p-6 border-slate-200 shadow-md">
+          <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+            <div className="grid h-10 w-10 place-items-center rounded-xl bg-purple-100 text-purple-700">
+              <Clock className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-xl font-black text-slate-900">PHC Medication Schedule & Care Plan Reminders</h2>
+              <p className="text-xs text-slate-500">Treatment process & medication advice prescribed by your PHC doctor and ASHA worker.</p>
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-4 md:grid-cols-2">
+            {/* Active Prescriptions */}
+            <div className="rounded-2xl border border-purple-100 bg-purple-50/50 p-5">
+              <h3 className="text-sm font-black text-purple-900 flex items-center gap-2">
+                <FileText className="h-4 w-4 text-purple-700" /> Prescribed Daily Medicines
+              </h3>
+              <div className="mt-3 space-y-2.5">
+                <div className="flex items-center justify-between rounded-xl bg-white p-3 border border-purple-100 shadow-sm text-xs">
+                  <div>
+                    <p className="font-extrabold text-slate-900">Amlodipine 5mg (BP)</p>
+                    <p className="text-slate-500">1 Tablet Daily · After Breakfast</p>
+                  </div>
+                  <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-extrabold text-emerald-800">Morning 8:00 AM</span>
+                </div>
+
+                <div className="flex items-center justify-between rounded-xl bg-white p-3 border border-purple-100 shadow-sm text-xs">
+                  <div>
+                    <p className="font-extrabold text-slate-900">Metformin 500mg (Blood Sugar)</p>
+                    <p className="text-slate-500">1 Tablet Daily · After Dinner</p>
+                  </div>
+                  <span className="rounded-full bg-indigo-100 px-2.5 py-1 text-[10px] font-extrabold text-indigo-800">Night 8:00 PM</span>
+                </div>
+
+                <div className="flex items-center justify-between rounded-xl bg-white p-3 border border-purple-100 shadow-sm text-xs">
+                  <div>
+                    <p className="font-extrabold text-slate-900">Iron & Folic Acid Supplement</p>
+                    <p className="text-slate-500">1 Tablet Daily · Post Meal</p>
+                  </div>
+                  <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-extrabold text-amber-800">Afternoon 1:00 PM</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Doctor Advice & PHC Process Instructions */}
+            <div className="rounded-2xl border border-blue-100 bg-blue-50/50 p-5">
+              <h3 className="text-sm font-black text-blue-900 flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4 text-blue-700" /> PHC Doctor & ASHA Didi Guidelines
+              </h3>
+              <ul className="mt-3 space-y-2 text-xs font-semibold text-slate-700">
+                <li className="flex items-start gap-2 rounded-xl bg-white p-3 border border-blue-100 shadow-sm">
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 mt-0.5" />
+                  <span><strong>Diet & Exercise:</strong> Walk for 30 mins every morning. Restrict daily salt intake to below 5 grams.</span>
+                </li>
+                <li className="flex items-start gap-2 rounded-xl bg-white p-3 border border-blue-100 shadow-sm">
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 mt-0.5" />
+                  <span><strong>BP Monitoring:</strong> Record Blood Pressure at PHC center every Tuesday with ASHA worker.</span>
+                </li>
+                <li className="flex items-start gap-2 rounded-xl bg-white p-3 border border-blue-100 shadow-sm">
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 mt-0.5" />
+                  <span><strong>Hydration:</strong> Drink 3-4 Liters of clean boiled water daily during warm weather.</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        {/* Nearby Doctors & PHC Staff List */}
+        <section className="card p-6 border-slate-200 shadow-md">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+            <div>
+              <span className="eyebrow">DOCTORS & MEDICAL OFFICERS</span>
+              <h2 className="text-xl font-black text-slate-900">Nearby PHC Doctors & Medical Officers</h2>
+              <p className="text-xs text-slate-500">Available doctors in your nearby primary health area.</p>
+            </div>
+            <Link href="/map" className="secondary-btn text-xs">
+              <MapPin className="h-3.5 w-3.5" /> View Map Locations
+            </Link>
+          </div>
+
+          <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:shadow-md transition">
+              <div className="flex items-center gap-3">
+                <div className="grid h-10 w-10 place-items-center rounded-xl bg-blue-100 text-blue-700 font-black">
+                  DR
+                </div>
+                <div>
+                  <p className="text-sm font-extrabold text-slate-900">Dr. Rajesh Sharma</p>
+                  <p className="text-xs text-slate-500">MBBS · Lead Medical Officer</p>
+                </div>
+              </div>
+              <div className="mt-3 pt-3 border-t border-slate-100 text-xs text-slate-600 space-y-1">
+                <p className="flex items-center gap-1.5"><Building2 className="h-3.5 w-3.5 text-slate-400" /> PHC Rampur Central</p>
+                <p className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5 text-slate-400" /> +91 98765 12345</p>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:shadow-md transition">
+              <div className="flex items-center gap-3">
+                <div className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-100 text-emerald-700 font-black">
+                  DR
+                </div>
+                <div>
+                  <p className="text-sm font-extrabold text-slate-900">Dr. Ananya Sharma</p>
+                  <p className="text-xs text-slate-500">MD Obstetrics · PHC Area Lead</p>
+                </div>
+              </div>
+              <div className="mt-3 pt-3 border-t border-slate-100 text-xs text-slate-600 space-y-1">
+                <p className="flex items-center gap-1.5"><Building2 className="h-3.5 w-3.5 text-slate-400" /> PHC Rampur East Sub-branch</p>
+                <p className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5 text-slate-400" /> +91 98765 23456</p>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:shadow-md transition">
+              <div className="flex items-center gap-3">
+                <div className="grid h-10 w-10 place-items-center rounded-xl bg-purple-100 text-purple-700 font-black">
+                  DR
+                </div>
+                <div>
+                  <p className="text-sm font-extrabold text-slate-900">Dr. Vikramaditya Roy</p>
+                  <p className="text-xs text-slate-500">Chief Health Authority Specialist</p>
+                </div>
+              </div>
+              <div className="mt-3 pt-3 border-t border-slate-100 text-xs text-slate-600 space-y-1">
+                <p className="flex items-center gap-1.5"><Building2 className="h-3.5 w-3.5 text-slate-400" /> District Headquarters CHC</p>
+                <p className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5 text-slate-400" /> +91 98765 34567</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Patient Complaint & Feedback Box */}
+        <section className="card p-6 border-slate-200 shadow-md">
+          <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+            <div className="grid h-10 w-10 place-items-center rounded-xl bg-rose-100 text-rose-700">
+              <FileText className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-xl font-black text-slate-900">Patient Complaint Box & Help Desk</h2>
+              <p className="text-xs text-slate-500">Report PHC facility issues, staff complaints, or submit feedback directly to the Central Authority.</p>
+            </div>
+          </div>
+
+          <form onSubmit={async (e) => {
+            e.preventDefault();
+            const formEl = e.currentTarget;
+            const complaintTitle = (formEl.querySelector('#complaint-title') as HTMLInputElement).value;
+            const complaintDetails = (formEl.querySelector('#complaint-details') as HTMLTextAreaElement).value;
+            const { data: { user } } = await supabase.auth.getUser();
+            const { error } = await supabase.from('support_requests').insert({
+              requested_by: user?.id || null,
+              facility_id: phcFacility?.id || null,
+              request_type: 'complaint',
+              title: complaintTitle.trim(),
+              details: complaintDetails.trim(),
+              priority: 'high',
+              status: 'requested'
+            });
+            if (error) {
+              setMessage(`Unable to submit complaint: ${error.message}`);
+            } else {
+              setMessage('Your complaint has been submitted to the Central Authority Help Desk for review.');
+              formEl.reset();
+            }
+          }} className="mt-5 grid gap-4 max-w-2xl">
+            <label className="text-xs font-bold text-slate-800">
+              Complaint / Feedback Subject
+              <input required id="complaint-title" placeholder="e.g. Medicine shortage at PHC center / Staff availability" className="input mt-1 text-xs font-semibold" />
+            </label>
+
+            <label className="text-xs font-bold text-slate-800">
+              Detailed Description of Complaint or Problem
+              <textarea required id="complaint-details" placeholder="Explain the problem you faced at your PHC or healthcare center..." className="input mt-1 min-h-24 text-xs font-normal" />
+            </label>
+
+            <button className="primary-btn bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs w-fit">
+              Submit Complaint to Central Authority
+            </button>
+          </form>
+        </section>
+
         {/* Appointment Scheduler Section */}
         <section className="card p-6 border-slate-200 shadow-md">
           <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">

@@ -7,6 +7,7 @@ const routeRoles:Record<string,string[]>={
 	'/assessment':['head','worker','doctor'],
 	'/referrals':['central','head','worker','doctor','hospital','patient'],
 	'/follow-ups':['head','worker','doctor','hospital','patient'],
+	'/hospital':['hospital'],
 	'/maternal-care':['head','worker','patient'],
 	'/workers':['central','head'],
 	'/patient-dashboard':['patient']

@@ -74,15 +74,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     };
   } catch (err) {
     console.error('getDashboardStats failed:', err);
-    return {
-      totalPatients: 0,
-      newPatientsThisWeek: 0,
-      highRiskPatients: 0,
-      criticalPatients: 0,
-      pendingReferrals: 0,
-      activeFollowUps: 0,
-      missedFollowUps: 0,
-    };
+    throw new Error('Unable to load authorised dashboard statistics');
   }
 }
 

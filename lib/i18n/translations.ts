@@ -1,11 +1,26 @@
-export type SupportedLanguage = 'en' | 'hi';
+export type SupportedLanguage = 'en' | 'hi' | 'gu' | 'mr' | 'bn' | 'ta' | 'te' | 'kn' | 'ml' | 'pa' | 'or';
 
 export interface TranslationDictionary {
   [key: string]: {
     en: string;
-    hi: string;
+    hi?: string;
+    [language: string]: string | undefined;
   };
 }
+
+export const languageOptions: { code: SupportedLanguage; label: string }[] = [
+  { code: 'en', label: 'English' },
+  { code: 'hi', label: 'हिन्दी' },
+  { code: 'gu', label: 'ગુજરાતી' },
+  { code: 'mr', label: 'मराठी' },
+  { code: 'bn', label: 'বাংলা' },
+  { code: 'ta', label: 'தமிழ்' },
+  { code: 'te', label: 'తెలుగు' },
+  { code: 'kn', label: 'ಕನ್ನಡ' },
+  { code: 'ml', label: 'മലയാളം' },
+  { code: 'pa', label: 'ਪੰਜਾਬੀ' },
+  { code: 'or', label: 'ଓଡ଼ିଆ' },
+];
 
 export const translations: TranslationDictionary = {
   // Brand & Shell

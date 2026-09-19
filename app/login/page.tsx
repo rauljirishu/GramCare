@@ -165,6 +165,10 @@ export default function Login() {
     }
 
     const targetRole = uiRoleFor(profile?.role || targetDbRole);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('gramcare_role', targetDbRole);
+      localStorage.setItem('demo_role', targetDbRole);
+    }
     router.replace(targetRole === 'patient' ? '/patient-dashboard' : '/dashboard');
   }
 

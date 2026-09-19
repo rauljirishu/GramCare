@@ -332,6 +332,15 @@ class GramCareSyncEngine {
             item.payload.server_id = data.id;
             item.payload.sync_status = 'synced';
 
+            const localRecords = this.getLocalRecords();
+            const recordIndex = localRecords.findIndex(record => record.id === item.id || record.local_id === item.id);
+            if (recordIndex !== -1) {
+              localRecords[recordIndex].id = data.id;
+              localRecords[recordIndex].server_id = data.id;
+              localRecords[recordIndex].sync_status = 'synced';
+              this.saveLocalRecords(localRecords);
+            }
+
             const localPatients = this.getLocalPatients();
             const idx = localPatients.findIndex(p => p.id === item.id || p.local_id === item.id);
             if (idx !== -1) {
@@ -387,6 +396,13 @@ class GramCareSyncEngine {
               const localPatients = this.getLocalPatients();
               const pat = localPatients.find(p => p.id === riskData.patient_id || p.local_id === riskData.patient_id);
               if (pat?.server_id) riskData.patient_id = pat.server_id;
+            }
+
+            if (riskData.health_record_id?.startsWith('loc_')) {
+              const localRecords = this.getLocalRecords();
+              const record = localRecords.find(item => item.id === riskData.health_record_id || item.local_id === riskData.health_record_id);
+              if (!record?.server_id) throw new Error('Waiting for health record synchronization');
+              riskData.health_record_id = record.server_id;
             }
 
             if (riskData.id.startsWith('loc_')) {

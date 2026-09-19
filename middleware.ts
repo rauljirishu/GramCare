@@ -3,7 +3,7 @@ const publicPaths=new Set(['/','/login','/signup','/verify-email']);
 const supportedRoles:Record<string,boolean>={central_authority:true,phc_head:true,doctor:true,phc_worker:true,hospital:true,patient:true,admin:true,asha:true,anm:true,medical_officer:true};
 const roleAlias:Record<string,string>={admin:'central_authority',medical_officer:'central_authority',asha:'phc_worker',anm:'phc_worker'};
 const routeRoles:Record<string,string[]>={
-	'/patients':['head','worker','doctor'],
+	'/patients':['head','worker','doctor','patient'],
 	'/assessment':['head','worker','doctor'],
 	'/referrals':['central','head','worker','doctor','hospital','patient'],
 	'/follow-ups':['head','worker','doctor','hospital','patient'],

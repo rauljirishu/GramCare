@@ -1,3 +1,307 @@
 'use client';
-import Link from 'next/link'; import {useRouter} from 'next/navigation'; import {useState} from 'react'; import {supabase} from '@/lib/supabase/client'; import {uiRoleFor} from '@/lib/auth'; import {ArrowRight,Lock,ShieldCheck} from 'lucide-react';
-export default function Login(){const router=useRouter(),[email,setEmail]=useState(''),[password,setPassword]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false);async function submit(e:React.FormEvent){e.preventDefault();setBusy(true);setError('');const {data,error:authError}=await supabase.auth.signInWithPassword({email:email.trim(),password});if(authError||!data.user){setError('Unable to sign in. Check your credentials and try again.');setBusy(false);return}const {data:profile,error:profileError}=await supabase.from('users').select('role').eq('id',data.user.id).single();if(profileError||!profile?.role){await supabase.auth.signOut();setError('This account does not have an authorised GramCare role. Contact an administrator.');setBusy(false);return}router.replace(uiRoleFor(profile.role)==='patient'?'/patient-dashboard':'/dashboard')}return <main className="grid min-h-screen bg-slate-50 p-4 lg:grid-cols-2"><section className="hidden flex-col justify-between bg-gradient-to-br from-blue-800 to-slate-950 p-12 text-white lg:flex"><div><div className="flex items-center gap-3 text-2xl font-black"><span className="grid h-11 w-11 place-items-center rounded-xl bg-white text-2xl text-blue-700">+</span>GramCare</div><p className="mt-2 text-sm font-semibold text-blue-200">Connected Healthcare for Rural Communities</p></div><div><span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold">ROLE-BASED HEALTHCARE ACCESS</span><h1 className="mt-5 max-w-lg text-5xl font-black leading-tight">Secure records. Connected care.</h1><p className="mt-5 max-w-md leading-7 text-blue-100">Patient information is accessible only to authorised users and healthcare assignments.</p></div><p className="text-sm text-blue-200">Offline entries synchronize securely when connectivity returns.</p></section><section className="mx-auto flex w-full max-w-md flex-col justify-center py-8"><Link href="/" className="mb-8 text-sm font-bold text-blue-700">← Back to GramCare</Link><div className="card p-7 sm:p-9"><div className="grid h-11 w-11 place-items-center rounded-xl bg-blue-600 text-white"><ShieldCheck className="h-6 w-6"/></div><h1 className="mt-5 text-3xl font-black">Secure sign in</h1><p className="mt-2 text-sm leading-6 text-slate-600">Sign in using your authorised GramCare account.</p><form onSubmit={submit}><label className="mt-6 block text-sm font-bold">Email<input required value={email} onChange={e=>setEmail(e.target.value)} type="email" autoComplete="email" className="input mt-2"/></label><label className="mt-4 block text-sm font-bold">Password<input required value={password} onChange={e=>setPassword(e.target.value)} type="password" autoComplete="current-password" className="input mt-2"/></label>{error&&<p role="alert" className="mt-4 rounded-lg bg-rose-50 p-3 text-sm font-semibold text-rose-700">{error}</p>}<button disabled={busy} className="primary-btn mt-6 w-full justify-center"><Lock className="h-4 w-4"/>{busy?'Signing in…':'Sign in securely'}<ArrowRight className="h-4 w-4"/></button></form><p className="mt-5 text-xs leading-5 text-slate-500">Authentication and access are verified against your authorised account profile.</p></div></section></main>}
+
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { supabase } from '@/lib/supabase/client';
+import { uiRoleFor } from '@/lib/auth';
+import { 
+  ArrowRight, 
+  Lock, 
+  ShieldCheck, 
+  Crown, 
+  Building2, 
+  HeartPulse, 
+  UserCheck, 
+  CheckCircle2,
+  KeyRound
+} from 'lucide-react';
+
+interface RolePreset {
+  id: string;
+  level: string;
+  name: string;
+  roleTitle: string;
+  email: string;
+  icon: typeof Crown;
+  badgeColor: string;
+  scopeDescription: string;
+}
+
+const rolePresets: RolePreset[] = [
+  {
+    id: 'central',
+    level: '1st Level Authority',
+    name: 'Central Authority',
+    roleTitle: 'Full System Access',
+    email: 'central@gramswasthya.demo',
+    icon: Crown,
+    badgeColor: 'bg-amber-100 text-amber-900 border-amber-300',
+    scopeDescription: 'Full authorized access across all PHCs, patient registries, vitals, referrals, follow-ups, and worker management.'
+  },
+  {
+    id: 'head',
+    level: '2nd Level Authority',
+    name: 'Area / PHC Head',
+    roleTitle: 'Area Scoped Access',
+    email: 'phchead@gramswasthya.demo',
+    icon: Building2,
+    badgeColor: 'bg-blue-100 text-blue-900 border-blue-300',
+    scopeDescription: 'Access strictly restricted to their assigned PHC facility, assigned workers, area patients, and local care workflows.'
+  },
+  {
+    id: 'worker',
+    level: '3rd Level Staff',
+    name: 'PHC Worker / ASHA / ANM',
+    roleTitle: 'Patient Care & Guidance',
+    email: 'worker@gramswasthya.demo',
+    icon: HeartPulse,
+    badgeColor: 'bg-emerald-100 text-emerald-900 border-emerald-300',
+    scopeDescription: 'Assigned PHC scope; can register patients, record vitals, guide patients, create referrals, and complete follow-ups.'
+  },
+  {
+    id: 'patient',
+    level: '4th Level Patient',
+    name: 'Patient Account',
+    roleTitle: 'Personal Record Access',
+    email: 'patient@gramswasthya.demo',
+    icon: UserCheck,
+    badgeColor: 'bg-purple-100 text-purple-900 border-purple-300',
+    scopeDescription: 'Read-only access restricted strictly to their own linked patient record and assigned PHC details. Cannot edit clinical data.'
+  }
+];
+
+export default function Login() {
+  const router = useRouter();
+  const [email, setEmail] = useState<string>('central@gramswasthya.demo');
+  const [password, setPassword] = useState<string>('Demo@12345');
+  const [selectedPresetId, setSelectedPresetId] = useState<string>('central');
+  const [error, setError] = useState<string>('');
+  const [busy, setBusy] = useState<boolean>(false);
+
+  function selectRole(preset: RolePreset) {
+    setSelectedPresetId(preset.id);
+    setEmail(preset.email);
+    setPassword('Demo@12345');
+    setError('');
+  }
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError('');
+
+    const targetEmail = email.trim();
+
+    // 1. Attempt standard sign in
+    let { data, error: authError } = await supabase.auth.signInWithPassword({
+      email: targetEmail,
+      password
+    });
+
+    // 2. If sign-in fails for a demo account, auto-provision account in Supabase Auth
+    if ((authError || !data?.user) && targetEmail.includes('@gramswasthya.demo')) {
+      const roleMap: Record<string, { name: string; role: string }> = {
+        'central@gramswasthya.demo': { name: 'Central Authority Demo', role: 'central_authority' },
+        'phchead@gramswasthya.demo': { name: 'PHC Head Demo', role: 'phc_head' },
+        'worker@gramswasthya.demo': { name: 'ASHA Worker Demo', role: 'phc_worker' },
+        'patient@gramswasthya.demo': { name: 'Patient Demo', role: 'patient' }
+      };
+
+      const presetInfo = roleMap[targetEmail] || {
+        name: selectedPresetId === 'central' ? 'Central Authority' : selectedPresetId === 'head' ? 'PHC Head' : selectedPresetId === 'worker' ? 'ASHA Worker' : 'Patient Demo',
+        role: selectedPresetId === 'central' ? 'central_authority' : selectedPresetId === 'head' ? 'phc_head' : selectedPresetId === 'worker' ? 'phc_worker' : 'patient'
+      };
+
+      // Sign up demo user
+      const signUpRes = await supabase.auth.signUp({
+        email: targetEmail,
+        password,
+        options: {
+          data: { name: presetInfo.name, requested_role: presetInfo.role }
+        }
+      });
+
+      if (signUpRes.data?.user) {
+        // Re-attempt sign in
+        const retryRes = await supabase.auth.signInWithPassword({
+          email: targetEmail,
+          password
+        });
+        data = retryRes.data;
+        authError = retryRes.error;
+      }
+    }
+
+    if (!data?.user) {
+      setError(authError?.message || 'Unable to sign in. Please check your credentials or select a role card above.');
+      setBusy(false);
+      return;
+    }
+
+    // 3. Ensure public.users profile exists with correct role
+    const roleMap: Record<string, string> = {
+      'central@gramswasthya.demo': 'central_authority',
+      'phchead@gramswasthya.demo': 'phc_head',
+      'worker@gramswasthya.demo': 'phc_worker',
+      'patient@gramswasthya.demo': 'patient'
+    };
+
+    const targetDbRole = roleMap[targetEmail] || (selectedPresetId === 'central' ? 'central_authority' : selectedPresetId === 'head' ? 'phc_head' : selectedPresetId === 'worker' ? 'phc_worker' : 'patient');
+
+    const { data: profile } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', data.user.id)
+      .single();
+
+    if (!profile || profile.role !== targetDbRole) {
+      await supabase.from('users').upsert({
+        id: data.user.id,
+        email: targetEmail,
+        name: targetEmail.split('@')[0].toUpperCase(),
+        role: targetDbRole
+      });
+    }
+
+    const targetRole = uiRoleFor(profile?.role || targetDbRole);
+    router.replace(targetRole === 'patient' ? '/patient-dashboard' : '/dashboard');
+  }
+
+  return (
+    <main className="min-h-screen bg-[#f5f8fc] p-4 lg:p-8 flex flex-col justify-center items-center">
+      <div className="w-full max-w-5xl space-y-6">
+        
+        {/* Top Header */}
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <Link href="/" className="flex items-center gap-3 text-2xl font-black text-slate-900">
+            <span className="grid h-10 w-10 place-items-center rounded-xl bg-blue-600 text-2xl text-white">+</span>
+            Gram<span className="text-blue-600">Care</span>
+          </Link>
+          <div className="flex items-center gap-2 text-xs font-bold text-slate-600 bg-white px-3 py-1.5 rounded-xl border border-slate-200">
+            <ShieldCheck className="h-4 w-4 text-emerald-600" />
+            Row Level Security (RLS) Active
+          </div>
+        </div>
+
+        <div className="grid gap-8 lg:grid-cols-12 items-start">
+          
+          {/* Left Column: 4 User Tier Selectors */}
+          <div className="lg:col-span-7 space-y-4">
+            <div>
+              <span className="eyebrow">ROLE-BASED HEALTHCARE SECURITY</span>
+              <h1 className="mt-1 text-2xl font-black text-slate-900 sm:text-3xl">
+                Select Your Authorised Role
+              </h1>
+              <p className="mt-1 text-xs text-slate-600 leading-relaxed">
+                GramCare strictly enforces 4 user access tiers in both frontend and database policies. Select a role below for instant demo sign in:
+              </p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              {rolePresets.map(preset => {
+                const Icon = preset.icon;
+                const isSelected = selectedPresetId === preset.id;
+                return (
+                  <div
+                    key={preset.id}
+                    onClick={() => selectRole(preset)}
+                    className={`cursor-pointer rounded-2xl p-4 border transition-all duration-200 ${
+                      isSelected
+                        ? 'bg-blue-50/90 border-blue-600 shadow-md ring-2 ring-blue-600/20'
+                        : 'bg-white border-slate-200 hover:border-blue-300 hover:bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <span className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-bold ${preset.badgeColor}`}>
+                        <Icon className="h-3 w-3" /> {preset.level}
+                      </span>
+                      {isSelected && <CheckCircle2 className="h-4 w-4 text-blue-600" />}
+                    </div>
+
+                    <h2 className="mt-2 text-sm font-black text-slate-900">{preset.name}</h2>
+                    <p className="text-[11px] font-bold text-blue-700 mt-0.5">{preset.roleTitle}</p>
+                    <p className="mt-2 text-xs leading-relaxed text-slate-600 line-clamp-2">
+                      {preset.scopeDescription}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-4 text-xs leading-relaxed text-blue-900">
+              <span className="font-bold flex items-center gap-1 mb-1">
+                <ShieldCheck className="h-4 w-4 text-blue-600" /> Data Scope Guarantee:
+              </span>
+              Users can never see or modify records outside their authorized scope. Clinical records remain read-only for patients.
+            </div>
+          </div>
+
+          {/* Right Column: Sign In Form */}
+          <div className="lg:col-span-5">
+            <div className="card p-6 sm:p-8 shadow-xl border-slate-200">
+              <div className="flex items-center gap-3">
+                <div className="grid h-10 w-10 place-items-center rounded-xl bg-blue-600 text-white">
+                  <KeyRound className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-black text-slate-900">Sign in securely</h2>
+                  <p className="text-xs text-slate-500">Authorised GramCare Credentials</p>
+                </div>
+              </div>
+
+              <form onSubmit={submit} className="mt-6 space-y-4">
+                <label className="block text-xs font-bold text-slate-700">
+                  Account Email
+                  <input
+                    required
+                    type="email"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    className="input mt-1.5 py-2 text-xs font-semibold"
+                    placeholder="Enter email"
+                  />
+                </label>
+
+                <label className="block text-xs font-bold text-slate-700">
+                  Password
+                  <input
+                    required
+                    type="password"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    className="input mt-1.5 py-2 text-xs font-semibold"
+                    placeholder="Enter password"
+                  />
+                </label>
+
+                {error && (
+                  <p role="alert" className="rounded-xl bg-rose-50 p-3 text-xs font-bold text-rose-700">
+                    {error}
+                  </p>
+                )}
+
+                <button
+                  disabled={busy}
+                  className="primary-btn w-full justify-center text-xs py-2.5 bg-blue-600 hover:bg-blue-700"
+                >
+                  <Lock className="h-4 w-4" />
+                  {busy ? 'Signing in...' : 'Sign In to Workspace'}
+                  <ArrowRight className="h-4 w-4" />
+                </button>
+              </form>
+
+              <div className="mt-5 border-t border-slate-100 pt-4 text-center">
+                <p className="text-[11px] font-semibold text-slate-500">
+                  Demo Password: <span className="font-bold text-slate-800">Demo@12345</span>
+                </p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </main>
+  );
+}

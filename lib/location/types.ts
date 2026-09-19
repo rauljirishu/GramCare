@@ -59,6 +59,8 @@ export interface NearbyFacilityResult {
   district: string | null;
   state: string | null;
   referral_available: boolean;
+  latitude: number;
+  longitude: number;
   distanceKm: number;
 }
 

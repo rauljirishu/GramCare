@@ -21,6 +21,7 @@ export default function Referrals() {
   const [notes, setNotes] = useState('');
   const [busyId, setBusyId] = useState('');
   const [loading, setLoading] = useState(true);
+  const [role, setRole] = useState('');
   const { language } = useSettings();
   const labels = uiLabels(language);
 
@@ -37,7 +38,9 @@ export default function Referrals() {
     }
     setLoading(false);
   }
-  useEffect(() => { load(); }, []);
+  useEffect(() => { import('@/lib/auth').then(({ currentRole }) => currentRole().then(value => setRole(value || ''))); load(); }, []);
+  const canCreate = ['central', 'head', 'worker', 'doctor'].includes(role);
+  const canManage = ['central', 'head', 'worker', 'doctor', 'hospital'].includes(role);
 
   async function create(event: React.FormEvent) {
     event.preventDefault();
@@ -50,7 +53,7 @@ export default function Referrals() {
 
   async function advance(item: Referral) {
     const status = nextStatus[item.status];
-    if (!status) return;
+    if (!status || !canManage) return;
     setBusyId(item.id); setNotice('');
     try { await updateReferralStatus(item.id, status, { notes: `Status advanced to ${status.replaceAll('_', ' ')}` }); await load(); }
     catch (error) { setNotice(error instanceof Error ? error.message : 'Unable to update referral status.'); }
@@ -58,9 +61,9 @@ export default function Referrals() {
   }
 
   return <DashboardShell>
-    <div className="flex flex-wrap items-start justify-between gap-4"><div><p className="eyebrow">Care coordination</p><h1 className="mt-2 text-3xl font-black">{labels.referrals}</h1><p className="mt-1 text-sm text-slate-600">PHC to receiving facility: accepted, in transit, arrived, treatment and completion.</p></div><button className="primary-btn" onClick={() => setShow(true)}>{labels.createReferral}</button></div>
+    <div className="flex flex-wrap items-start justify-between gap-4"><div><p className="eyebrow">Care coordination</p><h1 className="mt-2 text-3xl font-black">{labels.referrals}</h1><p className="mt-1 text-sm text-slate-600">{role === 'patient' ? 'Your linked referral history (read-only).' : 'PHC to receiving facility: accepted, in transit, arrived, treatment and completion.'}</p></div>{canCreate && <button className="primary-btn" onClick={() => setShow(true)}>{labels.createReferral}</button>}</div>
     {notice && <p role="status" className="mt-4 rounded-xl bg-blue-50 p-3 text-sm font-semibold text-blue-800">{notice}</p>}
-    <section className="card mt-6 overflow-x-auto">{loading ? <p className="p-8 text-center text-sm text-slate-500">{labels.loading}</p> : items.length === 0 ? <div className="p-8 text-center text-sm text-slate-500"><p>{labels.noReferrals}</p><button onClick={load} className="secondary-btn mt-4">{labels.retry}</button></div> : <table className="w-full min-w-[760px] text-left text-sm"><thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr><th className="p-4">Patient</th><th className="p-4">Receiving facility</th><th className="p-4">Reason</th><th className="p-4">Status</th><th className="p-4">Action</th></tr></thead><tbody>{items.map(item => <tr className="border-t" key={item.id}><td className="p-4 font-bold">{item.patient?.name || 'Authorised patient'}<small className="block text-slate-500">{item.patient?.patient_code}</small></td><td className="p-4">{item.referred_to_text || 'Not specified'}</td><td className="p-4">{item.reason}</td><td className="p-4"><span className="rounded-full bg-blue-50 px-2 py-1 text-xs font-bold text-blue-700">{item.status.replaceAll('_', ' ')}</span></td><td className="p-4">{nextStatus[item.status] && <button disabled={busyId === item.id} onClick={() => advance(item)} className="text-xs font-bold text-blue-700 disabled:opacity-50">{busyId === item.id ? 'Saving...' : `Mark ${nextStatus[item.status]?.replaceAll('_', ' ')}`}</button>}</td></tr>)}</tbody></table>}</section>
+    <section className="card mt-6 overflow-x-auto">{loading ? <p className="p-8 text-center text-sm text-slate-500">{labels.loading}</p> : items.length === 0 ? <div className="p-8 text-center text-sm text-slate-500"><p>{labels.noReferrals}</p><button onClick={load} className="secondary-btn mt-4">{labels.retry}</button></div> : <table className="w-full min-w-[760px] text-left text-sm"><thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr><th className="p-4">Patient</th><th className="p-4">Receiving facility</th><th className="p-4">Reason</th><th className="p-4">Status</th>{canManage && <th className="p-4">Action</th>}</tr></thead><tbody>{items.map(item => <tr className="border-t" key={item.id}><td className="p-4 font-bold">{item.patient?.name || 'Authorised patient'}<small className="block text-slate-500">{item.patient?.patient_code}</small></td><td className="p-4">{item.referred_to_text || 'Not specified'}</td><td className="p-4">{item.reason}</td><td className="p-4"><span className="rounded-full bg-blue-50 px-2 py-1 text-xs font-bold text-blue-700">{item.status.replaceAll('_', ' ')}</span></td>{canManage && <td className="p-4">{nextStatus[item.status] && <button disabled={busyId === item.id} onClick={() => advance(item)} className="text-xs font-bold text-blue-700 disabled:opacity-50">{busyId === item.id ? 'Saving...' : `Mark ${nextStatus[item.status]?.replaceAll('_', ' ')}`}</button>}</td>}</tr>)}</tbody></table>}</section>
     {show && <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/50 p-4"><form onSubmit={create} className="card w-full max-w-lg p-6"><h2 className="text-xl font-black">Create referral</h2><p className="mt-1 text-sm text-slate-600">Use the patient ID from the authorised patient record.</p><label className="mt-4 block text-sm font-bold">Patient database ID<input required value={patientId} onChange={event => setPatientId(event.target.value)} className="input mt-1" /></label><label className="mt-3 block text-sm font-bold">Receiving facility<input required value={hospital} onChange={event => setHospital(event.target.value)} className="input mt-1" /></label><label className="mt-3 block text-sm font-bold">Reason<textarea required value={reason} onChange={event => setReason(event.target.value)} className="input mt-1" /></label><label className="mt-3 block text-sm font-bold">Clinical notes<textarea value={notes} onChange={event => setNotes(event.target.value)} className="input mt-1" /></label><div className="mt-5 flex gap-3"><button className="primary-btn">Submit referral</button><button type="button" onClick={() => setShow(false)} className="secondary-btn">Cancel</button></div></form></div>}
   </DashboardShell>;
 }

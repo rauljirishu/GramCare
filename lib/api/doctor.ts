@@ -854,6 +854,8 @@ export async function getNearbyFacilities(
       district: f.district ?? null,
       state: f.state ?? null,
       referral_available: f.referral_available ?? true,
+      latitude: f.latitude!,
+      longitude: f.longitude!,
       distanceKm: haversineDistanceKm(latitude, longitude, f.latitude!, f.longitude!),
     }))
     .sort((a, b) => a.distanceKm - b.distanceKm)
